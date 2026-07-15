@@ -183,6 +183,7 @@ body.newtab {
   color: var(--nord9);
   flex-shrink: 0;
   white-space: nowrap;
+  min-width: 8ch;
 }
 
 .agenda-item .title {
