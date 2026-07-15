@@ -62,7 +62,6 @@ body.newtab {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -100,7 +99,7 @@ body.newtab {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 3px;
 }
 
 .cal-weekday {
@@ -113,7 +112,7 @@ body.newtab {
 
 .cal-day {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1 / 0.72;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -146,7 +145,7 @@ body.newtab {
 
 .cal-day .dots {
   position: absolute;
-  bottom: 4px;
+  bottom: 3px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
