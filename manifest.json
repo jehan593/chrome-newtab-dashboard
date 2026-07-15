@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Nord New Tab",
+  "version": "1.0.0",
+  "description": "A minimal new tab page with a Nextcloud calendar, quick notes, and a task list, styled with the Nord color palette.",
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "js/background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
+    "https://api.bigdatacloud.net/*"
+  ],
+  "optional_host_permissions": ["*://*/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

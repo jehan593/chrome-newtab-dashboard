@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Nord New Tab — Settings</title>
+<link rel="stylesheet" href="css/nord.css" />
+<style>
+  body {
+    padding: 32px;
+    max-width: 480px;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+  .field {
+    margin-bottom: 14px;
+  }
+  label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  input,
+  select {
+    width: 100%;
+  }
+  .hint {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .status {
+    margin-top: 14px;
+    font-size: 13px;
+    min-height: 18px;
+  }
+  .status.is-error {
+    color: var(--danger);
+  }
+  .status.is-ok {
+    color: var(--success);
+  }
+  .current {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  select[hidden],
+  .current[hidden] {
+    display: none;
+  }
+  .calendar-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .calendar-list[hidden] {
+    display: none;
+  }
+  .calendar-list label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    margin: 0;
+  }
+  .calendar-list input[type="checkbox"] {
+    width: auto;
+    accent-color: var(--accent);
+  }
+  .cal-swatch {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  h2 {
+    font-size: 14px;
+    margin: 32px 0 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .inline-row {
+    display: flex;
+    gap: 8px;
+  }
+  .inline-row input {
+    flex: 1;
+  }
+</style>
+</head>
+<body>
+  <h1>Nord New Tab</h1>
+  <p class="subtitle">Connect your Nextcloud calendar (view-only). Notes and tasks stay local to this browser.</p>
+
+  <p class="current" id="current-connection" hidden></p>
+
+  <div class="field">
+    <label for="base-url">Nextcloud server URL</label>
+    <input id="base-url" type="url" placeholder="https://cloud.example.com" />
+    <p class="hint">You'll log in to this server directly in a new tab — no need to look up a username or generate an app password yourself.</p>
+  </div>
+
+  <div class="field">
+    <label>Calendars</label>
+    <div id="calendar-list" class="calendar-list" hidden></div>
+    <p class="hint">Pick one or more — events from all checked calendars are merged into a single view.</p>
+  </div>
+
+  <div class="row">
+    <button type="button" id="connect-btn">Connect with Nextcloud login</button>
+    <button type="button" id="cancel-btn" hidden>Cancel</button>
+    <button type="button" id="disconnect-btn">Disconnect</button>
+  </div>
+
+  <p class="status" id="status"></p>
+
+  <h2>Weather</h2>
+  <p class="current" id="weather-current" hidden></p>
+
+  <div class="field">
+    <label for="weather-city">Set a city</label>
+    <div class="inline-row">
+      <input id="weather-city" type="text" placeholder="e.g. Colombo" autocomplete="off" />
+      <button type="button" id="weather-save-city-btn">Save</button>
+    </div>
+    <p class="hint">Leave this blank and use "Use my location" below instead to auto-detect where you are.</p>
+  </div>
+
+  <div class="row">
+    <button type="button" id="weather-use-geo-btn">Use my location</button>
+  </div>
+
+  <p class="status" id="weather-status"></p>
+
+  <script type="module" src="js/options.js"></script>
+</body>
+</html>

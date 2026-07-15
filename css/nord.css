@@ -1,0 +1,135 @@
+/* Nord palette: https://www.nordtheme.com/ */
+:root {
+  --nord0: #2e3440;
+  --nord1: #3b4252;
+  --nord2: #434c5e;
+  --nord3: #4c566a;
+  --nord4: #d8dee9;
+  --nord5: #e5e9f0;
+  --nord6: #eceff4;
+  --nord7: #8fbcbb;
+  --nord8: #88c0d0;
+  --nord9: #81a1c1;
+  --nord10: #5e81ac;
+  --nord11: #bf616a;
+  --nord12: #d08770;
+  --nord13: #ebcb8b;
+  --nord14: #a3be8c;
+  --nord15: #b48ead;
+
+  --accent: var(--nord8);
+  --danger: var(--nord11);
+  --success: var(--nord14);
+}
+
+:root,
+:root[data-theme="dark"] {
+  --bg: var(--nord0);
+  --bg-elevated: var(--nord1);
+  --border: var(--nord2);
+  --text: var(--nord6);
+  --text-muted: var(--nord4);
+  /* nord3 alone is ~1.4:1 against nord0/nord1 -- far too low to read. This is
+     a lightened blend of nord3/nord4 instead, keeping the "dimmer than body
+     text" hierarchy while staying legible (~4:1+) on dark backgrounds. */
+  --text-dim: #98a2b3;
+}
+
+:root[data-theme="light"] {
+  --bg: var(--nord6);
+  --bg-elevated: var(--nord5);
+  --border: var(--nord4);
+  --text: var(--nord0);
+  --text-muted: var(--nord2);
+  --text-dim: var(--nord3);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: var(--nord6);
+    --bg-elevated: var(--nord5);
+    --border: var(--nord4);
+    --text: var(--nord0);
+    --text-muted: var(--nord2);
+    --text-dim: var(--nord3);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+a {
+  color: var(--accent);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+::placeholder {
+  color: var(--text-dim);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

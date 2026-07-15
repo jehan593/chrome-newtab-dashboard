@@ -1,0 +1,435 @@
+body.newtab {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.page {
+  max-width: min(1600px, 92vw);
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+}
+
+.icon-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+.grid {
+  display: grid;
+  /* minmax(0, Nfr), not bare Nfr -- bare fr tracks floor at their content's
+     min-content width, so a wide-min-content card (e.g. Tasks' input+button)
+     can eat space a narrower one (Notes' shrinkable textarea) needed to get
+     its fair 1fr share. minmax(0, ...) makes every track follow the ratio. */
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 26px;
+}
+
+.card h2 {
+  margin: 0 0 20px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  margin-bottom: 20px;
+}
+
+.card-header h2 {
+  margin: 0;
+}
+
+/* ---------- Calendar ---------- */
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-nav button {
+  padding: 4px 9px;
+}
+
+.cal-month-label {
+  min-width: 108px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-weekday {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.cal-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  border: 1px solid transparent;
+}
+
+.cal-day:hover {
+  border-color: var(--border);
+}
+
+.cal-day.is-outside {
+  color: var(--text-dim);
+}
+
+.cal-day.is-today {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cal-day.is-selected {
+  background: var(--accent);
+  color: var(--nord0);
+  font-weight: 600;
+}
+
+.cal-day .dots {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+}
+
+.cal-day .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cal-agenda {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.cal-agenda-date {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.agenda-item {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.agenda-item .time {
+  color: var(--nord9);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.agenda-item .title {
+  color: var(--text);
+}
+
+.agenda-item .location {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.cal-swatch {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.agenda-empty,
+.cal-empty {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.cal-error {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.cal-empty a {
+  color: var(--accent);
+}
+
+/* ---------- Notes ---------- */
+
+.notes-textarea {
+  width: 100%;
+  min-height: 260px;
+  resize: vertical;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.notes-textarea:focus-visible {
+  outline: none;
+}
+
+.notes-status {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  height: 14px;
+}
+
+/* ---------- Tasks ---------- */
+
+.task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.task-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.task-item:hover {
+  border-color: var(--accent);
+}
+
+.task-item.dragging {
+  opacity: 0.4;
+}
+
+.task-item.drag-over {
+  border-top: 2px solid var(--accent);
+}
+
+.task-handle {
+  visibility: hidden;
+  color: var(--text-dim);
+  cursor: grab;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.task-item:hover .task-handle {
+  visibility: visible;
+}
+
+.task-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.task-text {
+  flex: 1;
+  font-size: 13.5px;
+  word-break: break-word;
+}
+
+.task-item.is-done .task-text {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+.task-delete {
+  visibility: hidden;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 2px 6px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.task-item:hover .task-delete {
+  visibility: visible;
+}
+
+.task-delete:hover {
+  color: var(--danger);
+}
+
+.task-empty {
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 8px 4px;
+}
+
+/* ---------- Weather ---------- */
+
+.weather-message {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0;
+}
+
+.weather-message a {
+  color: var(--accent);
+}
+
+.weather-error {
+  color: var(--danger);
+}
+
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.weather-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.weather-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.weather-temp {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.weather-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.weather-location {
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.weather-hilo {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.weather-hourly {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.weather-hour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.weather-hour-time {
+  color: var(--text-dim);
+}
+
+.weather-hour-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+}
+
+.weather-hour-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.weather-hour-temp {
+  color: var(--text);
+}
