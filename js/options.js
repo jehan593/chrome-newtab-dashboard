@@ -295,6 +295,45 @@ weatherUseGeoBtn.addEventListener("click", async () => {
 
 loadWeatherSettings();
 
+// ---------- Notesnook ----------
+
+const notesnookCurrentEl = document.getElementById("notesnook-current");
+const notesnookApiKeyInput = document.getElementById("notesnook-api-key");
+const notesnookTagIdInput = document.getElementById("notesnook-tag-id");
+const notesnookSaveBtn = document.getElementById("notesnook-save-btn");
+const notesnookStatusEl = document.getElementById("notesnook-status");
+
+function showNotesnookStatus(message, isError) {
+  notesnookStatusEl.textContent = message;
+  notesnookStatusEl.className = "status" + (isError ? " is-error" : message ? " is-ok" : "");
+}
+
+async function loadNotesnookSettings() {
+  const { apiKey, tagId } = await storage.getNotesnookSettings();
+  notesnookTagIdInput.value = tagId || "";
+  if (apiKey) {
+    setCurrentStatus(notesnookCurrentEl, "connected", tagId ? "Inbox API key saved, tagging notes." : "Inbox API key saved.");
+    notesnookApiKeyInput.value = apiKey;
+  } else {
+    setCurrentStatus(notesnookCurrentEl, "neutral", "Not set yet — paste an inbox API key below.");
+  }
+}
+
+notesnookSaveBtn.addEventListener("click", async () => {
+  const apiKey = notesnookApiKeyInput.value.trim();
+  const tagId = notesnookTagIdInput.value.trim();
+  notesnookSaveBtn.disabled = true;
+  try {
+    await storage.setNotesnookSettings({ apiKey: apiKey || null, tagId: tagId || null });
+    showNotesnookStatus(apiKey ? "Saved." : "Cleared.", false);
+    await loadNotesnookSettings();
+  } finally {
+    notesnookSaveBtn.disabled = false;
+  }
+});
+
+loadNotesnookSettings();
+
 // ---------- Widgets ----------
 
 const WIDGET_LABELS = {
@@ -307,16 +346,20 @@ const WIDGET_LABELS = {
 const widgetToggleListEl = document.getElementById("widget-toggle-list");
 const nextcloudSettingsCardEl = document.getElementById("nextcloud-settings-card");
 const weatherSettingsCardEl = document.getElementById("weather-settings-card");
+const notesnookSettingsCardEl = document.getElementById("notesnook-settings-card");
 
 // The connection settings for a widget are pointless to show once that
-// widget is turned off -- and if only one of the two remains, let it use the
-// full row instead of leaving the other grid column empty.
+// widget is turned off -- and if only one of the three remains, let it use
+// the full row instead of leaving a grid column empty.
 function updateServiceCardVisibility(enabled) {
   nextcloudSettingsCardEl.hidden = !enabled.calendar;
   weatherSettingsCardEl.hidden = !enabled.weather;
-  const onlyOneVisible = enabled.calendar !== enabled.weather;
+  notesnookSettingsCardEl.hidden = !enabled.notes;
+  const visibleCount = [enabled.calendar, enabled.weather, enabled.notes].filter(Boolean).length;
+  const onlyOneVisible = visibleCount === 1;
   nextcloudSettingsCardEl.classList.toggle("is-full-width", enabled.calendar && onlyOneVisible);
   weatherSettingsCardEl.classList.toggle("is-full-width", enabled.weather && onlyOneVisible);
+  notesnookSettingsCardEl.classList.toggle("is-full-width", enabled.notes && onlyOneVisible);
 }
 
 async function loadWidgetToggles() {

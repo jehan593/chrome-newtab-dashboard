@@ -252,6 +252,34 @@
 
     <p class="status" id="weather-status"></p>
   </section>
+
+  <section class="settings-card" id="notesnook-settings-card">
+    <h2>Notesnook</h2>
+
+    <p class="current" id="notesnook-current">
+      <span class="current-dot"></span>
+      <span class="current-text">Not set yet.</span>
+    </p>
+
+    <div class="field">
+      <label for="notesnook-api-key">Inbox API key</label>
+      <input id="notesnook-api-key" type="password" placeholder="Paste your inbox API key" autocomplete="off" />
+      <p class="hint">From Notesnook: Settings &gt; Inbox &gt; Create Key.</p>
+    </div>
+
+    <div class="field">
+      <label for="notesnook-tag-id">Tag ID (optional)</label>
+      <input id="notesnook-tag-id" type="text" placeholder="e.g. 67aecf3b9e1398484554bc90" autocomplete="off" />
+      <p class="hint">
+        In Notesnook, right-click a tag (e.g. "Quick") and choose Copy ID. Notes sent from the widget will get this tag,
+        and always use the current date and time as their title.
+      </p>
+    </div>
+
+    <button type="button" id="notesnook-save-btn">Save</button>
+
+    <p class="status" id="notesnook-status"></p>
+  </section>
   </div>
 
   <script type="module" src="js/options.js"></script>
