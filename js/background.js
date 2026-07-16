@@ -9,26 +9,49 @@ import { resolveStoredLocation, refreshWeather } from "./weatherSync.js";
 
 const ALARM_NAME = "hourly-calendar-refresh";
 
-async function refreshCurrentMonth() {
+function monthOffset(date, delta) {
+  const d = new Date(date.getFullYear(), date.getMonth() + delta, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+async function refreshUpcomingMonths() {
+  // Turning the Calendar widget off in settings stops this background fetch
+  // too, without touching the stored Nextcloud login itself -- that's only
+  // cleared by the explicit Disconnect button, so re-enabling the widget
+  // later doesn't require logging in again.
+  const { enabled } = await storage.getWidgetConfig();
+  if (!enabled.calendar) return;
+
   const settings = await storage.getSettings();
   if (!settings.nextcloud || !settings.nextcloud.calendars || !settings.nextcloud.calendars.length) return;
 
   const now = new Date();
-  // onStartup fires on every browser relaunch, which could in principle happen
-  // several times within an hour -- don't hit the network again if the cache
-  // for this month is still fresh, so the real-world request rate stays
-  // capped at roughly once per hour no matter how often this function runs.
-  const alreadyFresh = await storage.getCachedEvents(monthKeyFor(now.getFullYear(), now.getMonth()));
-  if (alreadyFresh) return;
+  // Keep the current month plus its neighbors warm so prev/next navigation in
+  // the widget hits cache instead of triggering a live, render-blocking fetch.
+  const months = [monthOffset(now, 0), monthOffset(now, 1), monthOffset(now, -1)];
 
-  try {
-    await refreshMonth(now.getFullYear(), now.getMonth(), settings);
-  } catch (err) {
-    console.warn("Background calendar refresh failed:", err);
+  for (const { year, month } of months) {
+    // onStartup fires on every browser relaunch, which could in principle happen
+    // several times within an hour -- don't hit the network again if the cache
+    // for this month is still fresh, so the real-world request rate stays
+    // capped no matter how often this function runs.
+    const alreadyFresh = await storage.getCachedEvents(monthKeyFor(year, month));
+    if (alreadyFresh) continue;
+
+    try {
+      await refreshMonth(year, month, settings);
+    } catch (err) {
+      console.warn(`Background calendar refresh failed for ${monthKeyFor(year, month)}:`, err);
+    }
   }
 }
 
 async function refreshCurrentWeather() {
+  // Same deal as calendar -- turning the Weather widget off stops this
+  // background fetch without clearing the saved location/city.
+  const { enabled } = await storage.getWidgetConfig();
+  if (!enabled.weather) return;
+
   // Only refreshes if a location is already known (manual city, or a geolocation
   // fix the widget previously obtained) -- this worker can't itself invoke
   // navigator.geolocation, that's a document-only API with its own permission UI.
@@ -53,18 +76,18 @@ function ensureAlarm() {
 
 chrome.runtime.onStartup.addListener(() => {
   ensureAlarm();
-  refreshCurrentMonth();
+  refreshUpcomingMonths();
   refreshCurrentWeather();
 });
 
 chrome.runtime.onInstalled.addListener(() => {
   ensureAlarm();
-  refreshCurrentMonth();
+  refreshUpcomingMonths();
   refreshCurrentWeather();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== ALARM_NAME) return;
-  refreshCurrentMonth();
+  refreshUpcomingMonths();
   refreshCurrentWeather();
 });

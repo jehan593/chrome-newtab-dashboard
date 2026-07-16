@@ -83,7 +83,11 @@ button {
   font-family: inherit;
   font-size: inherit;
   color: var(--text);
-  background: var(--bg-elevated);
+  /* Buttons sit on --bg-elevated cards (in both the newtab widgets and
+     settings page) -- matching --bg-elevated here made them blend straight
+     into their container with only a faint border left to read as a button.
+     --bg (the same surface inputs already use) gives real contrast instead. */
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
@@ -94,6 +98,16 @@ button {
 button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  border-color: var(--border);
+  color: var(--text);
 }
 
 button:focus-visible,
@@ -118,6 +132,21 @@ select {
 
 ::placeholder {
   color: var(--text-dim);
+}
+
+/* Visually hidden but still reachable by screen readers -- used for widget
+   titles that are dropped visually (the content makes the widget's purpose
+   obvious on its own) but should stay as an accessible heading landmark. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 ::-webkit-scrollbar {

@@ -27,8 +27,8 @@ function formatHour(isoString) {
 function shellHTML() {
   return `
     <div class="card-header">
-      <h2>Weather</h2>
-      <button type="button" class="icon-btn" data-action="refresh" aria-label="Refresh weather" title="Refresh">⟳</button>
+      <h2 class="sr-only">Weather</h2>
+      <button type="button" class="icon-btn" data-action="refresh" aria-label="Refresh weather" title="Refresh"><span class="refresh-icon">⟳</span></button>
     </div>
     <div class="weather-body"></div>
   `;
@@ -123,7 +123,15 @@ export async function initWeather(root) {
     }
   }
 
-  root.querySelector('[data-action="refresh"]').addEventListener("click", () => render(true));
+  const refreshBtn = root.querySelector('[data-action="refresh"]');
+  refreshBtn.addEventListener("click", async () => {
+    refreshBtn.classList.add("is-spinning");
+    try {
+      await render(true);
+    } finally {
+      refreshBtn.classList.remove("is-spinning");
+    }
+  });
 
   await render();
 }
