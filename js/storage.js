@@ -106,6 +106,18 @@ export async function invalidateEventCache() {
   await set({ eventCache: {} });
 }
 
+export async function getNotesnookSettings() {
+  const { notesnookSettings } = await get("notesnookSettings");
+  return notesnookSettings || { apiKey: null, tagId: null };
+}
+
+export async function setNotesnookSettings(partial) {
+  const current = await getNotesnookSettings();
+  const next = { ...current, ...partial };
+  await set({ notesnookSettings: next });
+  return next;
+}
+
 export async function getWeatherSettings() {
   const { weatherSettings } = await get("weatherSettings");
   return weatherSettings || { manualLocation: null };
