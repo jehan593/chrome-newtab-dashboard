@@ -168,17 +168,51 @@ function resolveDrop(positions, draggedId, targetCell, columnCount) {
   return next;
 }
 
+/** Clamping each widget's column independently (Math.min(pos.col, columnCount))
+ *  stops it landing in a nonexistent column, but does nothing about two widgets
+ *  whose columns clamp to the *same* value -- e.g. dropping from 3 columns to 2
+ *  makes whatever lived in columns 2 and 3 both land on column 2, one hidden
+ *  behind the other. This walks widgets in saved (col, row) order and slides
+ *  any that collide with something already placed in that column down to the
+ *  next open row. Purely a display-time transform -- positions (and storage)
+ *  keep the original layout, so widening the window back out restores it
+ *  exactly without needing to persist anything. */
+function remapForColumnCount(positions, columnCount) {
+  const entries = Object.entries(positions)
+    .map(([id, pos]) => ({ id, col: Math.min(pos.col, columnCount), row: pos.row, span: WIDGETS[id].rowSpan }))
+    .sort((a, b) => a.col - b.col || a.row - b.row);
+
+  const occupied = new Set();
+  const next = {};
+  for (const entry of entries) {
+    let row = entry.row;
+    while (true) {
+      let fits = true;
+      for (let r = row; r < row + entry.span; r++) {
+        if (occupied.has(`${entry.col}:${r}`)) {
+          fits = false;
+          break;
+        }
+      }
+      if (fits) break;
+      row++;
+    }
+    next[entry.id] = { col: entry.col, row };
+    for (let r = row; r < row + entry.span; r++) occupied.add(`${entry.col}:${r}`);
+  }
+  return next;
+}
+
 /** Applies each widget's {col, row} as an explicit grid placement (not
  *  auto-flow) -- this is what actually lets a widget land in a specific
- *  empty cell instead of wherever row-major auto-flow would put it. Columns
- *  are clamped to whatever's currently available so a position saved at a
- *  wider viewport doesn't overflow into an implicit column on a narrower one. */
+ *  empty cell instead of wherever row-major auto-flow would put it. */
 function applyPositions(positions, columnCount) {
+  const remapped = remapForColumnCount(positions, columnCount);
   for (const [id, widget] of Object.entries(WIDGETS)) {
     const el = document.getElementById(widget.elementId);
-    const pos = positions[id];
+    const pos = remapped[id];
     if (!el || !pos) continue;
-    el.style.gridColumn = String(Math.min(pos.col, columnCount));
+    el.style.gridColumn = String(pos.col);
     el.style.gridRow = `${pos.row} / span ${widget.rowSpan}`;
   }
 }
