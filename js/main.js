@@ -272,46 +272,56 @@ function initFreeDragReorder(grid, getPositions, onDrop) {
 }
 
 async function init() {
-  const settings = await storage.getSettings();
-  applyTheme(settings.theme);
-
-  document.querySelector(".theme-toggle").addEventListener("click", async () => {
-    const next = currentEffectiveTheme() === "dark" ? "light" : "dark";
-    applyTheme(next);
-    await storage.setSettings({ theme: next });
-  });
-
-  document.querySelector(".settings-btn").addEventListener("click", () => {
-    chrome.runtime.openOptionsPage();
-  });
-
   const grid = document.querySelector(".grid");
-
-  const widgetConfig = await storage.getWidgetConfig();
-  const enabledIds = Object.keys(WIDGETS).filter((id) => widgetConfig.enabled[id]);
-  // Drop any saved position for a widget id that no longer exists (e.g. a
-  // removed widget) -- resolveDrop() has no per-id existence guard, so a
-  // stale key here would throw partway through the next drag-and-drop.
-  const savedPositions = Object.fromEntries(
-    Object.entries(widgetConfig.positions).filter(([id]) => WIDGETS[id])
-  );
-  let positions = fillMissingPositions(savedPositions, enabledIds, getGridMetrics(grid).columnCount);
-
+  let positions;
   const activeCards = [];
   const initPromises = [];
-  for (const [id, widget] of Object.entries(WIDGETS)) {
-    const el = document.getElementById(widget.elementId);
-    if (!el) continue;
-    el.dataset.widgetId = id;
-    if (!enabledIds.includes(id)) {
-      el.classList.add("is-widget-disabled");
-      continue;
+
+  // Theme/positions come from async chrome.storage reads, so the page starts
+  // hidden (see newtab.html/.page.is-loading) to avoid a flash of default
+  // theme/order before they're applied. The finally guarantees it's revealed
+  // even if something above throws, rather than leaving the page blank.
+  try {
+    const settings = await storage.getSettings();
+    applyTheme(settings.theme);
+
+    document.querySelector(".theme-toggle").addEventListener("click", async () => {
+      const next = currentEffectiveTheme() === "dark" ? "light" : "dark";
+      applyTheme(next);
+      await storage.setSettings({ theme: next });
+    });
+
+    document.querySelector(".settings-btn").addEventListener("click", () => {
+      chrome.runtime.openOptionsPage();
+    });
+
+    const widgetConfig = await storage.getWidgetConfig();
+    const enabledIds = Object.keys(WIDGETS).filter((id) => widgetConfig.enabled[id]);
+    // Drop any saved position for a widget id that no longer exists (e.g. a
+    // removed widget) -- resolveDrop() has no per-id existence guard, so a
+    // stale key here would throw partway through the next drag-and-drop.
+    const savedPositions = Object.fromEntries(
+      Object.entries(widgetConfig.positions).filter(([id]) => WIDGETS[id])
+    );
+    positions = fillMissingPositions(savedPositions, enabledIds, getGridMetrics(grid).columnCount);
+
+    for (const [id, widget] of Object.entries(WIDGETS)) {
+      const el = document.getElementById(widget.elementId);
+      if (!el) continue;
+      el.dataset.widgetId = id;
+      if (!enabledIds.includes(id)) {
+        el.classList.add("is-widget-disabled");
+        continue;
+      }
+      activeCards.push(el);
+      initPromises.push(id === "calendar" ? initCalendar(el, settings) : widget.init(el));
     }
-    activeCards.push(el);
-    initPromises.push(id === "calendar" ? initCalendar(el, settings) : widget.init(el));
+
+    applyPositions(positions, getGridMetrics(grid).columnCount);
+  } finally {
+    document.querySelector(".page").classList.remove("is-loading");
   }
 
-  applyPositions(positions, getGridMetrics(grid).columnCount);
   await storage.setWidgetConfig({ positions });
   await Promise.all(initPromises);
 

@@ -8,6 +8,14 @@ body.newtab {
   margin: 0 auto;
 }
 
+/* Grid positions/theme are applied from chrome.storage, which is async --
+   without this, the page briefly paints in default DOM order/theme before
+   main.js's init() reflows it, which reads as a flash on every new tab.
+   Hidden (not display:none) so layout/measurements still happen underneath. */
+.page.is-loading {
+  visibility: hidden;
+}
+
 .page-header {
   display: flex;
   align-items: center;
