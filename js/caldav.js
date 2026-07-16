@@ -13,6 +13,17 @@ const SABRE_NS = "http://sabredav.org/ns";
 // Fallback palette (Nord aurora/frost accents) for calendars with no configured color.
 const FALLBACK_COLORS = ["#a3be8c", "#d08770", "#81a1c1", "#b48ead", "#ebcb8b", "#bf616a", "#8fbcbb"];
 
+// Bounds how long a slow/unreachable server can block the calendar widget --
+// without this, fetch() has no default timeout and a hung connection stalls
+// the UI indefinitely instead of falling back to cached data.
+const REQUEST_TIMEOUT_MS = 10000;
+
+function withTimeout() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  return { signal: controller.signal, cancel: () => clearTimeout(timer) };
+}
+
 function extractSabreMessage(xmlText) {
   try {
     const doc = parseXML(xmlText);
@@ -51,6 +62,7 @@ function toICSDateUTC(date) {
 
 async function davRequest(url, method, username, appPassword, body, extraHeaders = {}) {
   let res;
+  const { signal, cancel } = withTimeout();
   try {
     res = await fetch(url, {
       method,
@@ -62,9 +74,15 @@ async function davRequest(url, method, username, appPassword, body, extraHeaders
         ...extraHeaders,
       },
       body,
+      signal,
     });
   } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error(`Timed out reaching ${url}. The server may be slow or unreachable.`);
+    }
     throw new Error(`Could not reach ${url}. Check the server URL and your network connection.`);
+  } finally {
+    cancel();
   }
 
   const text = await res.text();
@@ -150,10 +168,16 @@ export async function listCalendars({ baseUrl, username, appPassword }) {
 /** Fetch a raw ICS feed directly (used for externally-subscribed calendars). */
 export async function fetchIcsFeed(url) {
   let res;
+  const { signal, cancel } = withTimeout();
   try {
-    res = await fetch(url, { credentials: "omit" });
+    res = await fetch(url, { credentials: "omit", signal });
   } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error(`Timed out reaching the subscribed calendar feed at ${url}.`);
+    }
     throw new Error(`Could not reach the subscribed calendar feed at ${url}.`);
+  } finally {
+    cancel();
   }
   if (!res.ok) {
     throw new Error(`Subscribed calendar feed returned ${res.status} ${res.statusText}.`);

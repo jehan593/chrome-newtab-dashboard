@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Nord New Tab",
   "version": "1.0.0",
-  "description": "A minimal new tab page with a Nextcloud calendar, quick notes, and a task list, styled with the Nord color palette.",
+  "description": "A minimal new tab page with a Nextcloud calendar, weather, quick notes, and a task list, styled with the Nord color palette.",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },

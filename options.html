@@ -7,7 +7,32 @@
 <style>
   body {
     padding: 32px;
-    max-width: 480px;
+    max-width: 980px;
+    /* The base 15px body size (nord.css) is tuned for the newtab widgets --
+       everything on this page except inputs/buttons already overrides it with
+       an explicit smaller size, so inputs/buttons (which use font-size:
+       inherit) were the only things left oversized. */
+    font-size: 13.5px;
+  }
+  /* The two cards used to just stack, which on any wide window left most of
+     the screen empty and pushed content below the fold for no reason -- a
+     side-by-side layout uses that width instead of wasting it vertically. */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  /* When only one of the two cards is enabled (its widget was toggled off),
+     let the remaining one use the full row instead of leaving the other
+     column empty. */
+  .settings-grid .is-full-width {
+    grid-column: 1 / -1;
   }
   h1 {
     font-size: 18px;
@@ -18,8 +43,24 @@
     font-size: 13px;
     margin: 0 0 24px;
   }
+  .settings-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 20px 22px;
+  }
+  .settings-section-spaced {
+    margin-bottom: 20px;
+  }
+  .settings-card h2 {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+  }
   .field {
-    margin-bottom: 14px;
+    margin-bottom: 18px;
   }
   label {
     display: block;
@@ -36,15 +77,18 @@
     color: var(--text-dim);
     margin-top: 4px;
   }
+  .widgets-hint {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
   .row {
     display: flex;
     gap: 8px;
-    margin-top: 18px;
   }
   .status {
-    margin-top: 14px;
-    font-size: 13px;
-    min-height: 18px;
+    margin-top: 10px;
+    font-size: 12.5px;
+    min-height: 16px;
   }
   .status.is-error {
     color: var(--danger);
@@ -52,30 +96,64 @@
   .status.is-ok {
     color: var(--success);
   }
+  #disconnect-btn {
+    margin-top: 6px;
+  }
+  /* Single source of truth for "what's the current state" -- a dot + one line
+     of text. Replaces having a separate badge AND a detail paragraph, which
+     just said the same thing twice in different words. */
   .current {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 13px;
     color: var(--text-muted);
-    margin-bottom: 18px;
-    padding: 10px 12px;
-    background: var(--bg-elevated);
+    margin-bottom: 20px;
+    padding: 9px 12px;
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 8px;
   }
-  select[hidden],
-  .current[hidden] {
-    display: none;
+  .current-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .current.is-connected .current-dot {
+    background: var(--success);
+  }
+  .current.is-connected {
+    color: var(--text);
+  }
+  .current.is-warning .current-dot {
+    background: var(--nord13);
+  }
+  .current.is-warning {
+    color: var(--nord13);
+  }
+  .step-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .option-divider {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 14px 0;
   }
   .calendar-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 10px 12px;
-    background: var(--bg-elevated);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 8px;
-  }
-  .calendar-list[hidden] {
-    display: none;
   }
   .calendar-list label {
     display: flex;
@@ -96,12 +174,6 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
-  h2 {
-    font-size: 14px;
-    margin: 32px 0 12px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-  }
   .inline-row {
     display: flex;
     gap: 8px;
@@ -115,45 +187,72 @@
   <h1>Nord New Tab</h1>
   <p class="subtitle">Connect your Nextcloud calendar (view-only). Notes and tasks stay local to this browser.</p>
 
-  <p class="current" id="current-connection" hidden></p>
+  <section class="settings-card settings-section-spaced">
+    <h2>Widgets</h2>
+    <p class="hint widgets-hint">
+      Choose which widgets show up on the new tab page. On the new tab page, hover a widget's top-left corner for a
+      drag handle to reorder it.
+    </p>
+    <div class="calendar-list" id="widget-toggle-list"></div>
+  </section>
 
-  <div class="field">
-    <label for="base-url">Nextcloud server URL</label>
-    <input id="base-url" type="url" placeholder="https://cloud.example.com" />
-    <p class="hint">You'll log in to this server directly in a new tab — no need to look up a username or generate an app password yourself.</p>
-  </div>
+  <div class="settings-grid">
+  <section class="settings-card" id="nextcloud-settings-card">
+    <h2>Nextcloud Calendar</h2>
 
-  <div class="field">
-    <label>Calendars</label>
-    <div id="calendar-list" class="calendar-list" hidden></div>
-    <p class="hint">Pick one or more — events from all checked calendars are merged into a single view.</p>
-  </div>
+    <p class="current" id="current-connection">
+      <span class="current-dot"></span>
+      <span class="current-text">Not connected yet.</span>
+    </p>
 
-  <div class="row">
-    <button type="button" id="connect-btn">Connect with Nextcloud login</button>
-    <button type="button" id="cancel-btn" hidden>Cancel</button>
-    <button type="button" id="disconnect-btn">Disconnect</button>
-  </div>
-
-  <p class="status" id="status"></p>
-
-  <h2>Weather</h2>
-  <p class="current" id="weather-current" hidden></p>
-
-  <div class="field">
-    <label for="weather-city">Set a city</label>
-    <div class="inline-row">
-      <input id="weather-city" type="text" placeholder="e.g. Colombo" autocomplete="off" />
-      <button type="button" id="weather-save-city-btn">Save</button>
+    <div class="field">
+      <label for="base-url">1. Server URL</label>
+      <input id="base-url" type="url" placeholder="https://cloud.example.com" />
+      <p class="hint" id="base-url-hint">Logs in through your browser — no app password to create by hand.</p>
     </div>
-    <p class="hint">Leave this blank and use "Use my location" below instead to auto-detect where you are.</p>
-  </div>
 
-  <div class="row">
-    <button type="button" id="weather-use-geo-btn">Use my location</button>
-  </div>
+    <div class="row">
+      <button type="button" id="connect-btn">Connect with Nextcloud login</button>
+      <button type="button" id="cancel-btn" hidden>Cancel</button>
+    </div>
 
-  <p class="status" id="weather-status"></p>
+    <div class="field" id="calendars-field" hidden>
+      <hr class="step-divider" />
+      <label>2. Choose calendars</label>
+      <div id="calendar-list" class="calendar-list"></div>
+      <p class="hint">Merged into one view on the new tab page.</p>
+    </div>
+
+    <p class="status" id="status"></p>
+
+    <button type="button" id="disconnect-btn" hidden>Disconnect</button>
+  </section>
+
+  <section class="settings-card" id="weather-settings-card">
+    <h2>Weather Location</h2>
+
+    <p class="current" id="weather-current">
+      <span class="current-dot"></span>
+      <span class="current-text">Not set yet.</span>
+    </p>
+
+    <div class="field">
+      <label for="weather-city">Set a city</label>
+      <div class="inline-row">
+        <input id="weather-city" type="text" placeholder="e.g. Colombo" autocomplete="off" />
+        <button type="button" id="weather-save-city-btn">Save</button>
+      </div>
+    </div>
+
+    <p class="option-divider">or</p>
+
+    <div class="row">
+      <button type="button" id="weather-use-geo-btn">Use my location</button>
+    </div>
+
+    <p class="status" id="weather-status"></p>
+  </section>
+  </div>
 
   <script type="module" src="js/options.js"></script>
 </body>

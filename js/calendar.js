@@ -4,12 +4,12 @@ import { monthKeyFor, refreshMonth } from "./eventsSync.js";
 function shellHTML() {
   return `
     <div class="card-header">
-      <h2>Calendar</h2>
+      <h2 class="sr-only">Calendar</h2>
       <div class="cal-nav">
         <button type="button" data-action="prev" aria-label="Previous month">‹</button>
         <span class="cal-month-label"></span>
         <button type="button" data-action="next" aria-label="Next month">›</button>
-        <button type="button" data-action="refresh" aria-label="Refresh events" title="Refresh">⟳</button>
+        <button type="button" data-action="refresh" aria-label="Refresh events" title="Refresh"><span class="refresh-icon">⟳</span></button>
       </div>
     </div>
     <p class="cal-empty" hidden>Connect your Nextcloud calendar in <a href="#" data-action="open-settings">settings</a> to see events here.</p>
@@ -51,10 +51,13 @@ function deserializeOccurrences(raw) {
   return raw.map((o) => ({ ...o, start: new Date(o.start), end: new Date(o.end) }));
 }
 
-async function getEventsForMonth(year, month, settings) {
-  const cached = await storage.getCachedEvents(monthKeyFor(year, month));
-  if (cached) return deserializeOccurrences(cached);
-  return refreshMonth(year, month, settings);
+/** Returns { events, stale } -- stale means an expired cache entry was returned
+ *  as a placeholder and a background refresh should be kicked off by the caller. */
+async function loadMonthEvents(year, month, settings) {
+  const cached = await storage.getCachedEventsEntry(monthKeyFor(year, month));
+  if (cached) return { events: deserializeOccurrences(cached.events), stale: cached.stale };
+  const events = await refreshMonth(year, month, settings);
+  return { events, stale: false };
 }
 
 function occOnDay(occ, date) {
@@ -77,7 +80,7 @@ function formatTime(date) {
   return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-export async function initCalendar(root) {
+export async function initCalendar(root, initialSettings) {
   root.innerHTML = shellHTML();
 
   const monthLabelEl = root.querySelector(".cal-month-label");
@@ -92,10 +95,19 @@ export async function initCalendar(root) {
   let viewMonth = today.getMonth();
   let selectedDate = today;
   let monthEvents = [];
+  let renderToken = 0; // bumped on every render() call so a stale background refresh can detect it's outdated
 
   root.querySelector('[data-action="prev"]').addEventListener("click", () => shiftMonth(-1));
   root.querySelector('[data-action="next"]').addEventListener("click", () => shiftMonth(1));
-  root.querySelector('[data-action="refresh"]').addEventListener("click", () => render(true));
+  const refreshBtn = root.querySelector('[data-action="refresh"]');
+  refreshBtn.addEventListener("click", async () => {
+    refreshBtn.classList.add("is-spinning");
+    try {
+      await render(true);
+    } finally {
+      refreshBtn.classList.remove("is-spinning");
+    }
+  });
   root.querySelector('[data-action="open-settings"]').addEventListener("click", (e) => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
@@ -209,34 +221,62 @@ export async function initCalendar(root) {
     return div.innerHTML;
   }
 
-  async function render(forceRefresh = false) {
-    const settings = await storage.getSettings();
+  async function render(forceRefresh = false, presetSettings = null) {
+    const settings = presetSettings || (await storage.getSettings());
     monthLabelEl.textContent = monthLabel(viewYear, viewMonth);
 
-    if (!settings.nextcloud || !settings.nextcloud.calendars || !settings.nextcloud.calendars.length) {
-      emptyEl.hidden = false;
-      errorEl.hidden = true;
-      gridEl.innerHTML = "";
-      agendaDateEl.textContent = "";
-      agendaListEl.innerHTML = "";
+    const connected = !!(settings.nextcloud && settings.nextcloud.calendars && settings.nextcloud.calendars.length);
+    // The day grid itself (weekStart, today/selected highlighting, clicking
+    // around dates) doesn't depend on Nextcloud being connected -- only the
+    // event dots and agenda entries do. So paint it either way; the "connect
+    // in settings" hint just becomes a permanent note instead of a full swap.
+    emptyEl.hidden = connected;
+    errorEl.hidden = true;
+    renderGrid(settings.weekStart ?? 1);
+    renderAgenda();
+
+    if (!connected) {
+      monthEvents = [];
       return;
     }
-    emptyEl.hidden = true;
 
     if (forceRefresh) await storage.invalidateEventCache();
 
+    const token = ++renderToken;
+    const year = viewYear;
+    const month = viewMonth;
+
     try {
-      monthEvents = await getEventsForMonth(viewYear, viewMonth, settings);
+      const { events, stale } = await loadMonthEvents(year, month, settings);
+      monthEvents = events;
       errorEl.hidden = true;
+      renderGrid(settings.weekStart ?? 1);
+      renderAgenda();
+
+      if (stale) {
+        // Paint the slightly-old cached data now, then quietly refresh in the
+        // background and re-render in place once fresh data arrives, instead
+        // of blocking the initial paint on the network.
+        refreshMonth(year, month, settings)
+          .then((fresh) => {
+            if (token !== renderToken) return; // user navigated away before this landed
+            monthEvents = fresh;
+            errorEl.hidden = true;
+            renderGrid(settings.weekStart ?? 1);
+            renderAgenda();
+          })
+          .catch((err) => {
+            console.warn(`Background refresh for ${monthKeyFor(year, month)} failed:`, err);
+          });
+      }
     } catch (err) {
       errorEl.hidden = false;
       errorEl.textContent = err.message || "Could not load events.";
       monthEvents = [];
+      renderGrid(settings.weekStart ?? 1);
+      renderAgenda();
     }
-
-    renderGrid(settings.weekStart ?? 1);
-    renderAgenda();
   }
 
-  await render();
+  await render(false, initialSettings);
 }

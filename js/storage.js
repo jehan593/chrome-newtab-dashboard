@@ -2,8 +2,11 @@
 
 // Freshness is primarily maintained by the background hourly refresh alarm
 // (js/background.js), not by opening a new tab -- this TTL is just a safety
-// net in case that alarm hasn't run yet (e.g. right after install).
-const EVENT_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+// net in case that alarm hasn't run yet (e.g. right after install). Kept
+// comfortably longer than the alarm's 60-minute period so a new tab opened
+// right at the boundary still finds a fresh-enough cache instead of racing
+// the alarm with its own live fetch.
+const EVENT_CACHE_TTL_MS = 90 * 60 * 1000; // 90 minutes
 const WEATHER_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 // Avoid re-invoking the OS location lookup (and its permission prompt) on
 // every tab open -- a device's location rarely changes meaningfully in a
@@ -36,6 +39,25 @@ export async function setSettings(partial) {
   return next;
 }
 
+export const DEFAULT_WIDGET_ORDER = ["calendar", "tasks", "notes", "weather"];
+
+/** { enabled: { [widgetId]: boolean }, positions: { [widgetId]: {col, row} } }.
+ *  positions is sparse -- any widget missing an entry (never placed yet, or a
+ *  widget type added after the user last saved) is auto-placed by main.js. */
+export async function getWidgetConfig() {
+  const { widgets } = await get("widgets");
+  const enabled = { ...Object.fromEntries(DEFAULT_WIDGET_ORDER.map((id) => [id, true])), ...(widgets && widgets.enabled) };
+  const positions = (widgets && widgets.positions) || {};
+  return { enabled, positions };
+}
+
+export async function setWidgetConfig(partial) {
+  const current = await getWidgetConfig();
+  const next = { ...current, ...partial };
+  await set({ widgets: next });
+  return next;
+}
+
 export async function getNotes() {
   const { notesScratchpad } = await get("notesScratchpad");
   return notesScratchpad || "";
@@ -60,6 +82,18 @@ export async function getCachedEvents(monthKey) {
   if (!entry) return null;
   if (Date.now() - entry.fetchedAt > EVENT_CACHE_TTL_MS) return null;
   return entry.events;
+}
+
+/**
+ * Like getCachedEvents, but also returns expired entries (tagged stale) instead
+ * of discarding them -- lets a caller paint immediately with slightly-old data
+ * while refreshing in the background, rather than blocking on the network.
+ */
+export async function getCachedEventsEntry(monthKey) {
+  const { eventCache } = await get("eventCache");
+  const entry = eventCache && eventCache[monthKey];
+  if (!entry) return null;
+  return { events: entry.events, stale: Date.now() - entry.fetchedAt > EVENT_CACHE_TTL_MS };
 }
 
 export async function setCachedEvents(monthKey, events) {

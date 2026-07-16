@@ -1,11 +1,14 @@
 import * as storage from "./storage.js";
+import { flashIcon, CHECK_ICON } from "./iconFeedback.js";
+
+const PLUS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
 
 function shellHTML() {
   return `
-    <h2>Tasks</h2>
+    <h2 class="sr-only">Tasks</h2>
     <form class="task-form">
       <input type="text" placeholder="Add a task…" autocomplete="off" required />
-      <button type="submit">Add</button>
+      <button type="submit" aria-label="Add task" title="Add task">${PLUS_ICON}</button>
     </form>
     <ul class="task-list"></ul>
   `;
@@ -21,12 +24,23 @@ export async function initTasks(root) {
   root.innerHTML = shellHTML();
   const form = root.querySelector(".task-form");
   const input = form.querySelector("input");
+  const addBtn = form.querySelector("button");
   const list = root.querySelector(".task-list");
 
   let tasks = await storage.getTasks();
   let draggedId = null;
 
   function render() {
+    // FLIP: record where each existing item currently sits before rebuilding
+    // the list, so a task that jumps to a new position (e.g. sinking to the
+    // bottom on completion) can be animated from its old spot to its new one
+    // instead of just appearing there -- a sudden reshuffle reads as
+    // confusing ("did my click even register?") more than a sorted list does.
+    const firstRects = new Map();
+    for (const el of list.querySelectorAll(".task-item")) {
+      firstRects.set(el.dataset.id, el.getBoundingClientRect());
+    }
+
     // Stable sort: done tasks sink to the bottom, but ties preserve `tasks`'
     // own order, which is what drag-and-drop reordering actually rearranges.
     const sorted = [...tasks].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
@@ -47,6 +61,27 @@ export async function initTasks(root) {
       </li>`
       )
       .join("");
+
+    for (const el of list.querySelectorAll(".task-item")) {
+      const before = firstRects.get(el.dataset.id);
+      if (!before) continue; // new task -- nothing to animate from
+      const after = el.getBoundingClientRect();
+      const dx = before.left - after.left;
+      const dy = before.top - after.top;
+      if (!dx && !dy) continue;
+
+      el.style.transition = "none";
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      // Double rAF: the browser needs to actually paint the inverted (start)
+      // position before switching on the transition, or it'll just skip
+      // straight to the end state with no visible animation.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 220ms ease";
+          el.style.transform = "";
+        });
+      });
+    }
   }
 
   async function persist() {
@@ -61,6 +96,7 @@ export async function initTasks(root) {
     input.value = "";
     render();
     await persist();
+    flashIcon(addBtn, CHECK_ICON, PLUS_ICON, "is-success");
   });
 
   list.addEventListener("change", async (e) => {

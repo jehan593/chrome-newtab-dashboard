@@ -3,6 +3,8 @@ import { listCalendars, startLoginFlow, pollLoginFlow } from "./caldav.js";
 import { geocodeCity } from "./weatherSync.js";
 
 const baseUrlInput = document.getElementById("base-url");
+const baseUrlHintEl = document.getElementById("base-url-hint");
+const calendarsFieldEl = document.getElementById("calendars-field");
 const calendarListEl = document.getElementById("calendar-list");
 const connectBtn = document.getElementById("connect-btn");
 const cancelBtn = document.getElementById("cancel-btn");
@@ -18,6 +20,14 @@ function showStatus(message, isError) {
   statusEl.className = "status" + (isError ? " is-error" : message ? " is-ok" : "");
 }
 
+// Single "what's the current state" line for a settings section -- a dot plus
+// one line of text. state is "neutral" (not set up), "connected" (working), or
+// "warning" (set up, but something needs attention -- e.g. a stale token).
+function setCurrentStatus(detailEl, state, detailText) {
+  detailEl.className = "current" + (state === "connected" ? " is-connected" : state === "warning" ? " is-warning" : "");
+  detailEl.querySelector(".current-text").textContent = detailText;
+}
+
 function populateCalendarList(calendars, selectedHrefs = []) {
   calendarListEl.innerHTML = calendars
     .map(
@@ -31,7 +41,7 @@ function populateCalendarList(calendars, selectedHrefs = []) {
       </label>`
     )
     .join("");
-  calendarListEl.hidden = false;
+  calendarsFieldEl.hidden = false;
 }
 
 function getCheckedCalendars() {
@@ -45,13 +55,14 @@ function getCheckedCalendars() {
 }
 
 function updateCurrentText(nc) {
+  disconnectBtn.hidden = !nc;
+  baseUrlHintEl.hidden = !!nc;
   if (!nc) {
-    currentEl.hidden = true;
+    setCurrentStatus(currentEl, "neutral", "Not connected yet.");
     return;
   }
-  currentEl.hidden = false;
   const names = (nc.calendars || []).map((c) => c.displayName).join(", ") || "no calendars checked yet";
-  currentEl.textContent = `Connected to ${nc.baseUrl} as ${nc.username} — using ${names}.`;
+  setCurrentStatus(currentEl, "connected", `Connected to ${nc.baseUrl} as ${nc.username} — using ${names}.`);
 }
 
 // On load, if we already have stored credentials, reuse them (and the
@@ -62,7 +73,7 @@ async function loadExisting() {
   const settings = await storage.getSettings();
   const nc = settings.nextcloud;
   if (!nc) {
-    currentEl.hidden = true;
+    updateCurrentText(null);
     baseUrlInput.value = "";
     return;
   }
@@ -90,10 +101,12 @@ async function loadExisting() {
 
     showStatus("Check off the calendars you want to see below.", false);
   } catch (err) {
-    showStatus(
-      `Could not refresh the calendar list (${err.message}). Use "Connect with Nextcloud login" below to reconnect.`,
-      true
+    setCurrentStatus(
+      currentEl,
+      "warning",
+      `Connected to ${nc.baseUrl} as ${nc.username}, but couldn't refresh the calendar list (${err.message}).`
     );
+    showStatus(`Could not refresh the calendar list. Use "Connect with Nextcloud login" below to reconnect.`, true);
   }
 }
 
@@ -201,10 +214,10 @@ calendarListEl.addEventListener("change", async () => {
 disconnectBtn.addEventListener("click", async () => {
   await storage.setSettings({ nextcloud: null });
   await storage.invalidateEventCache();
-  calendarListEl.hidden = true;
+  calendarsFieldEl.hidden = true;
   calendarListEl.innerHTML = "";
   pendingCreds = null;
-  currentEl.hidden = true;
+  updateCurrentText(null);
   baseUrlInput.value = "";
   showStatus("Disconnected. Calendar events are cleared from the new tab page.", false);
 });
@@ -227,15 +240,15 @@ function showWeatherStatus(message, isError) {
 async function loadWeatherSettings() {
   const weatherSettings = await storage.getWeatherSettings();
   if (weatherSettings.manualLocation) {
-    weatherCurrentEl.hidden = false;
-    weatherCurrentEl.textContent = `Using manual city: ${weatherSettings.manualLocation.name}.`;
+    setCurrentStatus(weatherCurrentEl, "connected", `Using city: ${weatherSettings.manualLocation.name}.`);
     weatherCityInput.value = weatherSettings.manualLocation.name.split(",")[0];
   } else {
     const geo = await storage.getLastGeoLocation();
-    weatherCurrentEl.hidden = false;
-    weatherCurrentEl.textContent = geo
-      ? "Using your device's location."
-      : "Not set yet — the new tab page will ask for location permission, or set a city below.";
+    if (geo) {
+      setCurrentStatus(weatherCurrentEl, "connected", "Using your device's location.");
+    } else {
+      setCurrentStatus(weatherCurrentEl, "neutral", "Not set yet — pick a city or use your location below.");
+    }
   }
 }
 
@@ -281,3 +294,49 @@ weatherUseGeoBtn.addEventListener("click", async () => {
 });
 
 loadWeatherSettings();
+
+// ---------- Widgets ----------
+
+const WIDGET_LABELS = {
+  calendar: "Calendar",
+  tasks: "Tasks",
+  notes: "Notes",
+  weather: "Weather",
+};
+
+const widgetToggleListEl = document.getElementById("widget-toggle-list");
+const nextcloudSettingsCardEl = document.getElementById("nextcloud-settings-card");
+const weatherSettingsCardEl = document.getElementById("weather-settings-card");
+
+// The connection settings for a widget are pointless to show once that
+// widget is turned off -- and if only one of the two remains, let it use the
+// full row instead of leaving the other grid column empty.
+function updateServiceCardVisibility(enabled) {
+  nextcloudSettingsCardEl.hidden = !enabled.calendar;
+  weatherSettingsCardEl.hidden = !enabled.weather;
+  const onlyOneVisible = enabled.calendar !== enabled.weather;
+  nextcloudSettingsCardEl.classList.toggle("is-full-width", enabled.calendar && onlyOneVisible);
+  weatherSettingsCardEl.classList.toggle("is-full-width", enabled.weather && onlyOneVisible);
+}
+
+async function loadWidgetToggles() {
+  const { enabled } = await storage.getWidgetConfig();
+  widgetToggleListEl.innerHTML = storage.DEFAULT_WIDGET_ORDER.map(
+    (id) => `
+      <label>
+        <input type="checkbox" data-widget-id="${id}" ${enabled[id] ? "checked" : ""} />
+        ${WIDGET_LABELS[id]}
+      </label>`
+  ).join("");
+  updateServiceCardVisibility(enabled);
+}
+
+widgetToggleListEl.addEventListener("change", async (e) => {
+  if (e.target.type !== "checkbox") return;
+  const { enabled } = await storage.getWidgetConfig();
+  const nextEnabled = { ...enabled, [e.target.dataset.widgetId]: e.target.checked };
+  await storage.setWidgetConfig({ enabled: nextEnabled });
+  updateServiceCardVisibility(nextEnabled);
+});
+
+loadWidgetToggles();

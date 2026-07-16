@@ -19,7 +19,7 @@ body.newtab {
 .icon-btn {
   background: transparent;
   border: 1px solid transparent;
-  padding: 6px 10px;
+  padding: 4px 8px;
 }
 
 .icon-btn:hover {
@@ -27,39 +27,133 @@ body.newtab {
   border-color: var(--border);
 }
 
+/* Spins the refresh icon while its (async, network-bound) refresh is
+   actually in flight -- a spinner reads as "working" better than a flash
+   would for something that takes real time, unlike the instant copy/clear
+   actions elsewhere. Targets a wrapping span, not the button itself, so the
+   button's own border/background stays put and only the glyph rotates. */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.refresh-icon {
+  display: inline-block;
+}
+
+.is-spinning .refresh-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Fixed two-tier sizing: every widget is either one tile (251px tall) or
+   "large" (two tiles + the row gap between them, ~520px, same width). Column
+   count is purely a function of viewport width (auto-fill). Widgets are
+   never auto-flowed into place -- main.js gives each one an explicit
+   grid-column/grid-row so it lands exactly where it was dragged to, with
+   empty cells left as genuine gaps rather than auto-flow backfilling them.
+   Tile height is intentionally fixed regardless of a widget's content; each
+   widget's own scrollable region (agenda list, task list, notes textarea,
+   weather body) flexes to fill it as a safety net for unusually long
+   content, but everything's internal sizing (fonts, padding, gaps) is
+   deliberately compact so normal content fits without scrolling.
+   align-items: stretch and min-height: 0 are spelled out explicitly (rather
+   than relying on grid's stretch default) so a tall widget's content can
+   never force its shared row track taller than 251px and drag a "small"
+   neighbor along with it. */
 .grid {
   display: grid;
-  /* minmax(0, Nfr), not bare Nfr -- bare fr tracks floor at their content's
-     min-content width, so a wide-min-content card (e.g. Tasks' input+button)
-     can eat space a narrower one (Notes' shrinkable textarea) needed to get
-     its fair 1fr share. minmax(0, ...) makes every track follow the ratio. */
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 0.75fr);
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 251px;
+  align-items: stretch;
+  gap: 14px;
 }
 
-@media (max-width: 1100px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.card.is-large {
+  grid-row: span 2;
 }
 
 .card {
+  position: relative; /* positioning context for the overlaid drag handle */
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 26px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.card.is-widget-disabled {
+  display: none;
+}
+
+.card.dragging {
+  opacity: 0.4;
+}
+
+/* Dashed-border ghost tracking the target grid cell while dragging (see
+   main.js's initFreeDragReorder) -- a grid child like the cards themselves,
+   just explicitly placed via JS instead of auto-flow, and non-interactive so
+   it never becomes the target of drag events itself. */
+.grid-drop-indicator {
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Absolutely positioned overlay, not a flex item -- takes zero layout space
+   (some cards are too tight to spare any). Faintly visible at all
+   times (rather than popping in on :hover of the whole card, which fired
+   distractingly often during ordinary clicking/typing) so it's discoverable
+   without a trigger. The element itself is a slightly bigger invisible hit
+   area near the corner (easier to grab); the two small lines it actually
+   shows are drawn via ::before/::after so the visible mark can stay tiny. */
+.card-drag-handle {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 11px;
+  height: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: grab;
+  opacity: 0.3;
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+
+.card-drag-handle::before,
+.card-drag-handle::after {
+  content: "";
+  width: 7px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--text-dim);
+  transition: background-color 0.15s ease;
+}
+
+.card-drag-handle:hover {
+  opacity: 1;
+}
+
+.card-drag-handle:hover::before,
+.card-drag-handle:hover::after {
+  background: var(--accent);
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
 }
 
 .card h2 {
-  margin: 0 0 20px;
-  font-size: 15px;
+  margin: 0 0 10px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--text-muted);
@@ -68,14 +162,57 @@ body.newtab {
 .card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* The h2 that used to sit at the start (making this space-between) is now
+     visually hidden -- flex-end keeps the remaining action buttons in their
+     familiar top-right corner instead of collapsing to the left edge. */
+  justify-content: flex-end;
   flex-wrap: wrap;
-  row-gap: 10px;
-  margin-bottom: 20px;
+  row-gap: 6px;
+  margin-bottom: 6px;
 }
 
 .card-header h2 {
   margin: 0;
+}
+
+/* Small icon-only action button (Notes' copy/clear) -- shares the base
+   button's background/border for contrast against the card, just sized for
+   a compact glyph instead of text. */
+.mini-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.mini-icon-btn svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+/* Generic (not scoped to .mini-icon-btn) so any button -- the task Add
+   button included -- can use the same success/error flash via flashIcon(). */
+.is-success {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+/* Same red as .is-error, but a distinct name -- this means "confirmed, shown
+   red because the action was destructive" (Clear), not "this failed". */
+.is-error,
+.is-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Clear is destructive -- hovering it hints at that with red instead of the
+   usual accent hover color other buttons get. */
+.mini-icon-btn[data-action="clear"]:hover {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* ---------- Calendar ---------- */
@@ -83,42 +220,68 @@ body.newtab {
 .cal-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  /* Spans the full card-header row (rather than shrinking to its own content
+     width) so the month label's flex: 1 below has actual room to expand into
+     and center itself between the prev/next buttons. */
+  width: 100%;
 }
 
 .cal-nav button {
-  padding: 4px 9px;
+  padding: 4px 7px;
+}
+
+/* A modest nudge away from next -- not pushed all the way to the card's edge
+   (that was the "too close to the border" problem), just enough to read as a
+   separate action from month navigation. */
+.cal-nav [data-action="refresh"] {
+  margin-left: 10px;
 }
 
 .cal-month-label {
-  min-width: 108px;
+  /* flex: 1 (not a fixed width) so the label actually centers itself in
+     whatever space is left between prev and next, rather than just sitting
+     next to prev with a fixed gap. min-width: 0 lets it shrink below its
+     content's natural width if the card is ever narrower than usual;
+     white-space: nowrap still guarantees it never wraps to two lines. */
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
   text-align: center;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, 1fr), not bare 1fr -- bare fr tracks floor at their content's
+     min-content width (e.g. "SUN"), so a narrow card can force the 7th
+     column past the card's edge, where overflow: hidden then clips it. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
 }
 
 .cal-weekday {
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-dim);
-  padding-bottom: 4px;
+  padding-bottom: 3px;
   text-transform: uppercase;
 }
 
 .cal-day {
   position: relative;
-  aspect-ratio: 1 / 0.72;
+  aspect-ratio: 1 / 0.62;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Reserves a strip at the bottom for the (absolutely-positioned) event dots,
+     so they land below the date number instead of overlapping its baseline --
+     centering now happens within the shrunk content box, not the full cell. */
+  padding-bottom: 7px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 11.5px;
   color: var(--text);
   border: 1px solid transparent;
 }
@@ -160,22 +323,32 @@ body.newtab {
 }
 
 .cal-agenda {
-  margin-top: 20px;
+  margin-top: 10px;
   border-top: 1px solid var(--border);
-  padding-top: 16px;
+  padding-top: 8px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .cal-agenda-date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.cal-agenda-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .agenda-item {
   display: flex;
-  gap: 10px;
-  padding: 6px 0;
-  font-size: 13px;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11.5px;
 }
 
 .agenda-item .time {
@@ -191,7 +364,7 @@ body.newtab {
 
 .agenda-item .location {
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .cal-swatch {
@@ -205,12 +378,12 @@ body.newtab {
 .agenda-empty,
 .cal-empty {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .cal-error {
   color: var(--danger);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .cal-empty a {
@@ -219,15 +392,21 @@ body.newtab {
 
 /* ---------- Notes ---------- */
 
+.notes-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .notes-textarea {
   width: 100%;
-  min-height: 260px;
-  resize: vertical;
+  flex: 1;
+  min-height: 0;
+  resize: none;
   border: none;
   background: transparent;
   padding: 0;
-  font-size: 13.5px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .notes-textarea:focus-visible {
@@ -245,23 +424,44 @@ body.newtab {
 
 .task-form {
   display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .task-form input {
   flex: 1;
   min-width: 0;
+  font-size: 12px;
+}
+
+.task-form button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  padding: 0;
+}
+
+.task-form button svg {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .task-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  /* Right padding keeps item cards from butting straight up against the
+     scrollbar when the list overflows -- the scrollbar sits in this gap
+     rather than right on the cards' edge. */
+  padding-right: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 320px;
+  gap: 7px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -269,7 +469,7 @@ body.newtab {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px;
+  padding: 5px 8px;
   border-radius: 6px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -301,14 +501,14 @@ body.newtab {
 
 .task-item input[type="checkbox"] {
   accent-color: var(--accent);
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
 .task-text {
   flex: 1;
-  font-size: 13.5px;
+  font-size: 11.5px;
   word-break: break-word;
 }
 
@@ -337,15 +537,21 @@ body.newtab {
 
 .task-empty {
   color: var(--text-dim);
-  font-size: 13px;
-  padding: 8px 4px;
+  font-size: 12px;
+  padding: 6px 4px;
 }
 
 /* ---------- Weather ---------- */
 
+.weather-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .weather-message {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
   margin: 0;
 }
 
@@ -360,12 +566,12 @@ body.newtab {
 .weather-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .weather-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   color: var(--accent);
 }
@@ -383,26 +589,26 @@ body.newtab {
 
 .weather-desc {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .weather-location {
-  margin-top: 16px;
+  margin-top: 6px;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: 11px;
 }
 
 .weather-hilo {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .weather-hourly {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
-  padding-top: 18px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--border);
 }
 
@@ -410,8 +616,8 @@ body.newtab {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 3px;
+  font-size: 10.5px;
   color: var(--text-muted);
 }
 
@@ -420,8 +626,8 @@ body.newtab {
 }
 
 .weather-hour-icon {
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
   color: var(--text-muted);
 }
 

@@ -4,6 +4,16 @@ import { initTasks } from "./tasks.js";
 import { initWeather } from "./weather.js";
 import * as storage from "./storage.js";
 
+// rowSpan drives placement (applyPositions sets grid-row explicitly, which
+// wins over CSS). newtab.html's is-large/is-small classes just keep the
+// pre-JS layout from flashing the wrong size for a beat on load.
+const WIDGETS = {
+  calendar: { elementId: "calendar-widget", init: initCalendar, rowSpan: 2 },
+  tasks: { elementId: "tasks-widget", init: initTasks, rowSpan: 1 },
+  notes: { elementId: "notes-widget", init: initNotes, rowSpan: 1 },
+  weather: { elementId: "weather-widget", init: initWeather, rowSpan: 1 },
+};
+
 function applyTheme(theme) {
   if (theme === "dark" || theme === "light") {
     document.documentElement.setAttribute("data-theme", theme);
@@ -16,6 +26,215 @@ function currentEffectiveTheme() {
   const attr = document.documentElement.getAttribute("data-theme");
   if (attr) return attr;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function addDragHandle(card) {
+  const handle = document.createElement("div");
+  handle.className = "card-drag-handle";
+  handle.draggable = true;
+  handle.setAttribute("aria-hidden", "true");
+  handle.title = "Drag to reorder";
+  card.prepend(handle);
+}
+
+/** Reads the grid's actual column count/width and row height straight from
+ *  its computed styles, instead of duplicating those numbers as JS constants
+ *  that would silently drift out of sync if layout.css's grid ever changes.
+ *  Assumes uniform column widths, which auto-fill + 1fr always produces. */
+function getGridMetrics(grid) {
+  const style = getComputedStyle(grid);
+  const columnWidths = style.gridTemplateColumns.split(" ").map(parseFloat);
+  const gap = parseFloat(style.columnGap) || 0;
+  const rowUnit = parseFloat(style.gridAutoRows) || 0;
+  return { columnCount: columnWidths.length, columnStep: columnWidths[0] + gap, rowStep: rowUnit + gap };
+}
+
+function cellAt(grid, clientX, clientY) {
+  const rect = grid.getBoundingClientRect();
+  const { columnCount, columnStep, rowStep } = getGridMetrics(grid);
+  const col = Math.min(columnCount, Math.max(1, Math.floor((clientX - rect.left) / columnStep) + 1));
+  const row = Math.max(1, Math.floor((clientY - rect.top) / rowStep) + 1);
+  return { col, row };
+}
+
+/** Fills in a {col, row} for any enabled widget missing one (first run, or a
+ *  widget type introduced after the user last saved a layout) via simple
+ *  row-major sparse packing -- same shape auto-flow would have produced. */
+function fillMissingPositions(positions, enabledIds, columnCount) {
+  const next = { ...positions };
+  const occupied = new Set();
+  const mark = (id, pos) => {
+    for (let r = pos.row; r < pos.row + WIDGETS[id].rowSpan; r++) occupied.add(`${pos.col}:${r}`);
+  };
+  for (const [id, pos] of Object.entries(next)) {
+    if (enabledIds.includes(id)) mark(id, pos);
+  }
+
+  for (const id of enabledIds) {
+    if (next[id]) continue;
+    const span = WIDGETS[id].rowSpan;
+    let row = 1;
+    let placed = false;
+    while (!placed) {
+      for (let col = 1; col <= columnCount; col++) {
+        let fits = true;
+        for (let r = row; r < row + span; r++) {
+          if (occupied.has(`${col}:${r}`)) {
+            fits = false;
+            break;
+          }
+        }
+        if (fits) {
+          next[id] = { col, row };
+          mark(id, { col, row });
+          placed = true;
+          break;
+        }
+      }
+      row++;
+    }
+  }
+  return next;
+}
+
+/** Finds the first free span-sized run of cells, scanning columns starting
+ *  from preferCol (wrapping around) before advancing to the next row -- keeps
+ *  a displaced widget in the same column when there's room there, only
+ *  spilling into other columns once that column is full at that row. */
+function findOpenCell(occupied, span, columnCount, preferCol) {
+  let row = 1;
+  while (true) {
+    for (let offset = 0; offset < columnCount; offset++) {
+      const col = ((preferCol - 1 + offset) % columnCount) + 1;
+      let fits = true;
+      for (let r = row; r < row + span; r++) {
+        if (occupied.has(`${col}:${r}`)) {
+          fits = false;
+          break;
+        }
+      }
+      if (fits) return { col, row };
+    }
+    row++;
+  }
+}
+
+/** Places draggedId at targetCell. Any widget(s) whose footprint the target
+ *  cell overlaps get bumped elsewhere -- plural, deliberately: a large
+ *  (2-row) widget dropped where two different small widgets sit (one per
+ *  row) overlaps both of them, and swapping with only the first match left
+ *  the second one stuck underneath it. Each displaced widget prefers landing
+ *  in the dragged widget's *old* spot (the intuitive "trade places" swap)
+ *  when it actually fits there, and only falls back to scanning for the
+ *  next open cell when it doesn't -- e.g. a 2-row widget can't fit into the
+ *  1-row gap a small dragged widget left behind. */
+function resolveDrop(positions, draggedId, targetCell, columnCount) {
+  const next = { ...positions };
+  const draggedOldPos = next[draggedId];
+  const draggedSpan = WIDGETS[draggedId].rowSpan;
+  delete next[draggedId];
+
+  const displacedIds = Object.keys(next).filter((otherId) => {
+    const pos = next[otherId];
+    const span = WIDGETS[otherId].rowSpan;
+    return targetCell.col === pos.col && targetCell.row < pos.row + span && targetCell.row + draggedSpan > pos.row;
+  });
+  for (const id of displacedIds) delete next[id];
+
+  next[draggedId] = targetCell;
+
+  const occupied = new Set();
+  for (const [id, pos] of Object.entries(next)) {
+    for (let r = pos.row; r < pos.row + WIDGETS[id].rowSpan; r++) occupied.add(`${pos.col}:${r}`);
+  }
+
+  const fitsAt = (col, row, span) => {
+    for (let r = row; r < row + span; r++) {
+      if (occupied.has(`${col}:${r}`)) return false;
+    }
+    return true;
+  };
+
+  for (const id of displacedIds) {
+    const span = WIDGETS[id].rowSpan;
+    const pos =
+      draggedOldPos && fitsAt(draggedOldPos.col, draggedOldPos.row, span)
+        ? { col: draggedOldPos.col, row: draggedOldPos.row }
+        : findOpenCell(occupied, span, columnCount, targetCell.col);
+    next[id] = pos;
+    for (let r = pos.row; r < pos.row + span; r++) occupied.add(`${pos.col}:${r}`);
+  }
+
+  return next;
+}
+
+/** Applies each widget's {col, row} as an explicit grid placement (not
+ *  auto-flow) -- this is what actually lets a widget land in a specific
+ *  empty cell instead of wherever row-major auto-flow would put it. Columns
+ *  are clamped to whatever's currently available so a position saved at a
+ *  wider viewport doesn't overflow into an implicit column on a narrower one. */
+function applyPositions(positions, columnCount) {
+  for (const [id, widget] of Object.entries(WIDGETS)) {
+    const el = document.getElementById(widget.elementId);
+    const pos = positions[id];
+    if (!el || !pos) continue;
+    el.style.gridColumn = String(Math.min(pos.col, columnCount));
+    el.style.gridRow = `${pos.row} / span ${widget.rowSpan}`;
+  }
+}
+
+/** Drag-and-drop where the drop target is a grid cell computed from pointer
+ *  position, not another element -- lets a widget land in any empty gap, not
+ *  just swap-adjacent-in-DOM-order. Actual placement (including displacing
+ *  whatever's in the way) is resolveDrop()'s job. */
+function initFreeDragReorder(grid, getPositions, onDrop) {
+  let draggedId = null;
+
+  // A dashed-border ghost tracking the target cell during drag -- explicit
+  // grid-column/grid-row placement (same mechanism the cards themselves use)
+  // means it's always pixel-perfect to the actual cell, no separate sizing
+  // math needed. pointer-events: none keeps it from intercepting drag events.
+  const indicator = document.createElement("div");
+  indicator.className = "grid-drop-indicator";
+
+  grid.addEventListener("dragstart", (e) => {
+    if (!e.target.classList.contains("card-drag-handle")) return;
+    const card = e.target.closest(".card");
+    draggedId = card.dataset.widgetId;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", draggedId);
+    requestAnimationFrame(() => card.classList.add("dragging"));
+  });
+
+  grid.addEventListener("dragend", () => {
+    draggedId = null;
+    grid.querySelectorAll(".card").forEach((el) => el.classList.remove("dragging"));
+    indicator.remove();
+  });
+
+  grid.addEventListener("dragover", (e) => {
+    if (!draggedId) return;
+    e.preventDefault();
+
+    const cell = cellAt(grid, e.clientX, e.clientY);
+    const span = WIDGETS[draggedId].rowSpan;
+    indicator.style.gridColumn = String(cell.col);
+    indicator.style.gridRow = `${cell.row} / span ${span}`;
+    if (!indicator.isConnected) grid.appendChild(indicator);
+  });
+
+  grid.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    if (!draggedId) return;
+    const id = draggedId;
+    draggedId = null;
+    indicator.remove();
+
+    const targetCell = cellAt(grid, e.clientX, e.clientY);
+    const positions = resolveDrop(getPositions(), id, targetCell, getGridMetrics(grid).columnCount);
+
+    await onDrop(positions);
+  });
 }
 
 async function init() {
@@ -32,12 +251,54 @@ async function init() {
     chrome.runtime.openOptionsPage();
   });
 
-  await Promise.all([
-    initCalendar(document.querySelector("#calendar-widget")),
-    initTasks(document.querySelector("#tasks-widget")),
-    initNotes(document.querySelector("#notes-widget")),
-    initWeather(document.querySelector("#weather-widget")),
-  ]);
+  const grid = document.querySelector(".grid");
+
+  const widgetConfig = await storage.getWidgetConfig();
+  const enabledIds = Object.keys(WIDGETS).filter((id) => widgetConfig.enabled[id]);
+  // Drop any saved position for a widget id that no longer exists (e.g. a
+  // removed widget) -- resolveDrop() has no per-id existence guard, so a
+  // stale key here would throw partway through the next drag-and-drop.
+  const savedPositions = Object.fromEntries(
+    Object.entries(widgetConfig.positions).filter(([id]) => WIDGETS[id])
+  );
+  let positions = fillMissingPositions(savedPositions, enabledIds, getGridMetrics(grid).columnCount);
+
+  const activeCards = [];
+  const initPromises = [];
+  for (const [id, widget] of Object.entries(WIDGETS)) {
+    const el = document.getElementById(widget.elementId);
+    if (!el) continue;
+    el.dataset.widgetId = id;
+    if (!enabledIds.includes(id)) {
+      el.classList.add("is-widget-disabled");
+      continue;
+    }
+    activeCards.push(el);
+    initPromises.push(id === "calendar" ? initCalendar(el, settings) : widget.init(el));
+  }
+
+  applyPositions(positions, getGridMetrics(grid).columnCount);
+  await storage.setWidgetConfig({ positions });
+  await Promise.all(initPromises);
+
+  // Drag handles are added only after every widget has finished rendering --
+  // each widget's init() wipes its root via innerHTML as its first step, which
+  // would delete a handle added any earlier.
+  for (const el of activeCards) addDragHandle(el);
+
+  initFreeDragReorder(grid, () => positions, async (nextPositions) => {
+    positions = nextPositions;
+    applyPositions(positions, getGridMetrics(grid).columnCount);
+    await storage.setWidgetConfig({ positions });
+  });
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      applyPositions(positions, getGridMetrics(grid).columnCount);
+    }, 100);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);
