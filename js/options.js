@@ -363,14 +363,19 @@ function updateServiceCardVisibility(enabled) {
 }
 
 async function loadWidgetToggles() {
-  const { enabled } = await storage.getWidgetConfig();
-  widgetToggleListEl.innerHTML = storage.DEFAULT_WIDGET_ORDER.map(
-    (id) => `
-      <label>
-        <input type="checkbox" data-widget-id="${id}" ${enabled[id] ? "checked" : ""} />
-        ${WIDGET_LABELS[id]}
-      </label>`
-  ).join("");
+  const { enabled, order } = await storage.getWidgetConfig();
+  widgetToggleListEl.innerHTML = order
+    .map(
+      (id) => `
+      <div class="widget-row" draggable="true" data-widget-id="${id}">
+        <span class="widget-drag-handle" aria-hidden="true">⠿</span>
+        <label>
+          <input type="checkbox" data-widget-id="${id}" ${enabled[id] ? "checked" : ""} />
+          ${WIDGET_LABELS[id]}
+        </label>
+      </div>`
+    )
+    .join("");
   updateServiceCardVisibility(enabled);
 }
 
@@ -380,6 +385,45 @@ widgetToggleListEl.addEventListener("change", async (e) => {
   const nextEnabled = { ...enabled, [e.target.dataset.widgetId]: e.target.checked };
   await storage.setWidgetConfig({ enabled: nextEnabled });
   updateServiceCardVisibility(nextEnabled);
+});
+
+// Plain list reordering: drag a row, and on every dragover swap it into the
+// list position of whatever row it's currently over (before/after depending
+// on which half of that row the pointer is in). Persisted on drop, not on
+// every intermediate swap, so a mid-drag order isn't written until it's final.
+let draggedWidgetId = null;
+
+widgetToggleListEl.addEventListener("dragstart", (e) => {
+  const row = e.target.closest(".widget-row");
+  if (!row) return;
+  draggedWidgetId = row.dataset.widgetId;
+  e.dataTransfer.effectAllowed = "move";
+  requestAnimationFrame(() => row.classList.add("dragging"));
+});
+
+widgetToggleListEl.addEventListener("dragend", () => {
+  draggedWidgetId = null;
+  widgetToggleListEl.querySelectorAll(".widget-row").forEach((row) => row.classList.remove("dragging"));
+});
+
+widgetToggleListEl.addEventListener("dragover", (e) => {
+  if (!draggedWidgetId) return;
+  e.preventDefault();
+  const row = e.target.closest(".widget-row");
+  if (!row || row.dataset.widgetId === draggedWidgetId) return;
+
+  const draggedEl = widgetToggleListEl.querySelector(`[data-widget-id="${draggedWidgetId}"]`);
+  const rect = row.getBoundingClientRect();
+  const isBefore = e.clientY < rect.top + rect.height / 2;
+  row.parentNode.insertBefore(draggedEl, isBefore ? row : row.nextSibling);
+});
+
+widgetToggleListEl.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  if (!draggedWidgetId) return;
+  draggedWidgetId = null;
+  const order = Array.from(widgetToggleListEl.querySelectorAll(".widget-row")).map((row) => row.dataset.widgetId);
+  await storage.setWidgetConfig({ order });
 });
 
 loadWidgetToggles();

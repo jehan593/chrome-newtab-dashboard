@@ -41,14 +41,21 @@ export async function setSettings(partial) {
 
 export const DEFAULT_WIDGET_ORDER = ["calendar", "tasks", "notes", "weather"];
 
-/** { enabled: { [widgetId]: boolean }, positions: { [widgetId]: {col, row} } }.
- *  positions is sparse -- any widget missing an entry (never placed yet, or a
- *  widget type added after the user last saved) is auto-placed by main.js. */
+/** { enabled: { [widgetId]: boolean }, order: [widgetId, ...] }. Widgets are
+ *  laid out via plain CSS grid auto-flow in this DOM order -- order is
+ *  reordered by dragging in the options page's widget list, not on the new
+ *  tab page itself. Filters out stale ids (a widget that no longer exists)
+ *  and appends any id missing from a saved order (never saved yet, or a
+ *  widget added after the user last saved) at the end. */
 export async function getWidgetConfig() {
   const { widgets } = await get("widgets");
   const enabled = { ...Object.fromEntries(DEFAULT_WIDGET_ORDER.map((id) => [id, true])), ...(widgets && widgets.enabled) };
-  const positions = (widgets && widgets.positions) || {};
-  return { enabled, positions };
+  const savedOrder = (widgets && widgets.order) || [];
+  const order = [
+    ...savedOrder.filter((id) => DEFAULT_WIDGET_ORDER.includes(id)),
+    ...DEFAULT_WIDGET_ORDER.filter((id) => !savedOrder.includes(id)),
+  ];
+  return { enabled, order };
 }
 
 export async function setWidgetConfig(partial) {
