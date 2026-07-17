@@ -167,6 +167,33 @@
     width: auto;
     accent-color: var(--accent);
   }
+  .widget-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .widget-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    margin: 0;
+  }
+  .widget-row input[type="checkbox"] {
+    width: auto;
+    accent-color: var(--accent);
+  }
+  .widget-drag-handle {
+    cursor: grab;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    user-select: none;
+  }
+  .widget-row.dragging {
+    opacity: 0.4;
+  }
   .cal-swatch {
     display: inline-block;
     width: 9px;
@@ -190,8 +217,7 @@
   <section class="settings-card settings-section-spaced">
     <h2>Widgets</h2>
     <p class="hint widgets-hint">
-      Choose which widgets show up on the new tab page. On the new tab page, hover a widget's top-left corner for a
-      drag handle to reorder it.
+      Choose which widgets show up on the new tab page, and drag to set the order they appear in.
     </p>
     <div class="calendar-list" id="widget-toggle-list"></div>
   </section>

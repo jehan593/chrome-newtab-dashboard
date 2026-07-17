@@ -8,7 +8,7 @@ body.newtab {
   margin: 0 auto;
 }
 
-/* Grid positions/theme are applied from chrome.storage, which is async --
+/* Widget order/theme are applied from chrome.storage, which is async --
    without this, the page briefly paints in default DOM order/theme before
    main.js's init() reflows it, which reads as a flash on every new tab.
    Hidden (not display:none) so layout/measurements still happen underneath. */
@@ -57,9 +57,14 @@ body.newtab {
 /* Fixed two-tier sizing: every widget is either one tile (251px tall) or
    "large" (two tiles + the row gap between them, ~520px, same width). Column
    count is purely a function of viewport width (auto-fill). Widgets are
-   never auto-flowed into place -- main.js gives each one an explicit
-   grid-column/grid-row so it lands exactly where it was dragged to, with
-   empty cells left as genuine gaps rather than auto-flow backfilling them.
+   plain auto-flowed grid items in DOM order (row-major, left to right, wrap
+   to the next row) -- main.js reorders the DOM to match the user's saved
+   order (set via drag-and-drop on the options page's widget list) but never
+   assigns a widget an explicit grid-column/grid-row itself. That's the fix
+   for the old "widgets overlap when the window is resized" bug class: there
+   was no separate position to recompute (and get wrong) on resize -- the
+   browser's own grid layout algorithm reflows column count and placement on
+   every resize for free.
    Tile height is intentionally fixed regardless of a widget's content; each
    widget's own scrollable region (agenda list, task list, notes textarea,
    weather body) flexes to fill it as a safety net for unusually long
@@ -82,7 +87,6 @@ body.newtab {
 }
 
 .card {
-  position: relative; /* positioning context for the overlaid drag handle */
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -90,73 +94,22 @@ body.newtab {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* No min-width here on purpose -- the grid's own minmax(260px, ...) column
+     width (above) already guarantees a card is never laid out narrower than
+     260px, and a grid item stretches to exactly its track's computed width
+     by default. Restating the same 260px as an independent min-width on the
+     card fights that computed width: the two are calculated separately, can
+     disagree by a sub-pixel from layout rounding, and when the min-width
+     wins by even a hair the grid overflows horizontally -- a page-wide
+     scrollbar for a mismatch you'd never see with the naked eye. The actual
+     "content overflows a too-narrow cell" guarantee lives on cal-day/
+     cal-weekday's own overflow: hidden below instead, which clips content to
+     whatever width the card actually ends up with, no floor required. */
   overflow: hidden;
 }
 
 .card.is-widget-disabled {
   display: none;
-}
-
-.card.dragging {
-  opacity: 0.4;
-}
-
-/* Dashed-border ghost tracking the target grid cell while dragging (see
-   main.js's initFreeDragReorder) -- a grid child like the cards themselves,
-   just explicitly placed via JS instead of auto-flow, and non-interactive so
-   it never becomes the target of drag events itself. */
-.grid-drop-indicator {
-  border: 2px dashed var(--accent);
-  border-radius: 10px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* Absolutely positioned overlay, not a flex item -- takes zero layout space
-   (some cards are too tight to spare any). Faintly visible at all
-   times (rather than popping in on :hover of the whole card, which fired
-   distractingly often during ordinary clicking/typing) so it's discoverable
-   without a trigger. The element itself is a slightly bigger invisible hit
-   area near the corner (easier to grab); the two small lines it actually
-   shows are drawn via ::before/::after so the visible mark can stay tiny. */
-.card-drag-handle {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 11px;
-  height: 9px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  cursor: grab;
-  opacity: 0.3;
-  transition: opacity 0.15s ease;
-  z-index: 1;
-}
-
-.card-drag-handle::before,
-.card-drag-handle::after {
-  content: "";
-  width: 7px;
-  height: 1.5px;
-  border-radius: 1px;
-  background: var(--text-dim);
-  transition: background-color 0.15s ease;
-}
-
-.card-drag-handle:hover {
-  opacity: 1;
-}
-
-.card-drag-handle:hover::before,
-.card-drag-handle:hover::after {
-  background: var(--accent);
-}
-
-.card-drag-handle:active {
-  cursor: grabbing;
 }
 
 .card h2 {
@@ -275,6 +228,13 @@ body.newtab {
   color: var(--text-dim);
   padding-bottom: 3px;
   text-transform: uppercase;
+  /* minmax(0, 1fr) columns (see .cal-grid) are explicitly allowed to shrink
+     past their label's min-content width -- without this, an over-squeezed
+     column doesn't clip its own text, it lets it paint over the neighboring
+     cell, which reads as the whole header "overlapping". overflow: hidden
+     makes a too-narrow column crop its own label instead. */
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .cal-day {
@@ -292,6 +252,12 @@ body.newtab {
   font-size: 11.5px;
   color: var(--text);
   border: 1px solid transparent;
+  /* Same reasoning as .cal-weekday: a minmax(0, 1fr) column can shrink below
+     the date number's own width, and without this the digit bleeds into the
+     next cell instead of being clipped -- that bleed is what actually reads
+     as "the calendar numbers overlap" when the window shrinks. */
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .cal-day:hover {
