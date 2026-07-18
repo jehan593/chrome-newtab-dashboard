@@ -35,6 +35,15 @@ body.newtab {
   border-color: var(--border);
 }
 
+/* Card-level refresh button (calendar, weather) -- a normal bordered button
+   like every other in-card action button (notes' copy/clear/send, calendar's
+   prev/next), not the page-header's ghost icon-btn style above (borderless
+   until hover), which is reserved for chrome sitting directly on the page
+   background rather than inside a card. */
+.refresh-btn {
+  padding: 4px 7px;
+}
+
 /* Spins the refresh icon while its (async, network-bound) refresh is
    actually in flight -- a spinner reads as "working" better than a flash
    would for something that takes real time, unlike the instant copy/clear
@@ -195,7 +204,7 @@ body.newtab {
 /* A modest nudge away from next -- not pushed all the way to the card's edge
    (that was the "too close to the border" problem), just enough to read as a
    separate action from month navigation. */
-.cal-nav [data-action="refresh"] {
+.cal-nav .refresh-btn {
   margin-left: 10px;
 }
 
