@@ -1,4 +1,4 @@
-# Nord New Tab
+# New Tab Dashboard
 
 A minimal Chrome new tab page with a Nextcloud calendar, quick notes, a task list, and weather — styled with the [Nord](https://www.nordtheme.com/) color palette.
 
