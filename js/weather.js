@@ -28,7 +28,7 @@ function shellHTML() {
   return `
     <div class="card-header">
       <h2 class="sr-only">Weather</h2>
-      <button type="button" class="icon-btn" data-action="refresh" aria-label="Refresh weather" title="Refresh"><span class="refresh-icon">⟳</span></button>
+      <button type="button" class="refresh-btn" data-action="refresh" aria-label="Refresh weather" title="Refresh"><span class="refresh-icon">⟳</span></button>
     </div>
     <div class="weather-body"></div>
   `;
