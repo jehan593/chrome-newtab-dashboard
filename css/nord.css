@@ -20,6 +20,23 @@
   --accent: var(--nord8);
   --danger: var(--nord11);
   --success: var(--nord14);
+  /* Distinct from --accent on purpose: accent means "interactive" (links,
+     hover, focus rings, the selected calendar day). Highlight means "notable
+     but not actionable" (today's date, an event marker, the weather glyph)
+     -- so a glance can tell "this responds to a click" from "this is just
+     information" instead of everything living in the same blue. */
+  --highlight: var(--nord15);
+
+  /* A real type scale instead of ad-hoc half-pixel tuning per widget --
+     everything under a fixed 251px tile pulls from these same five steps.
+     --fs-hero is reserved for exactly one thing (the weather temperature):
+     the rest of the dashboard is small and quiet by design, so the one
+     number worth a glance should be the only text with real size. */
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-hero: 34px;
 }
 
 :root,

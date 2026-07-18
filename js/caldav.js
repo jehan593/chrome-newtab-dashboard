@@ -13,6 +13,32 @@ const SABRE_NS = "http://sabredav.org/ns";
 // Fallback palette (Nord aurora/frost accents) for calendars with no configured color.
 const FALLBACK_COLORS = ["#a3be8c", "#d08770", "#81a1c1", "#b48ead", "#ebcb8b", "#bf616a", "#8fbcbb"];
 
+function hexToRgb(hex) {
+  const int = parseInt(hex.slice(1), 16);
+  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+}
+
+// Nextcloud lets a user pick any color from an unconstrained hex wheel, which
+// reads as visual noise against the extension's own Nord palette. Snapping
+// whatever they picked to its nearest color in FALLBACK_COLORS above (plain
+// RGB distance -- good enough for "which of 7 named hues is this closest to",
+// no need for perceptual color math) keeps calendars visually distinct from
+// each other while staying on-theme.
+function nearestNordColor(hex) {
+  const target = hexToRgb(hex);
+  let closest = FALLBACK_COLORS[0];
+  let closestDist = Infinity;
+  for (const candidate of FALLBACK_COLORS) {
+    const c = hexToRgb(candidate);
+    const dist = (target.r - c.r) ** 2 + (target.g - c.g) ** 2 + (target.b - c.b) ** 2;
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = candidate;
+    }
+  }
+  return closest;
+}
+
 // Bounds how long a slow/unreachable server can block the calendar widget --
 // without this, fetch() has no default timeout and a hung connection stalls
 // the UI indefinitely instead of falling back to cached data.
@@ -157,7 +183,7 @@ export async function listCalendars({ baseUrl, username, appPassword }) {
     const rawColor = textOf(response, ICAL_NS, "calendar-color");
     // Nextcloud sometimes returns 8-digit #RRGGBBAA; keep just the RGB part.
     const color = /^#[0-9a-fA-F]{6}/.test(rawColor)
-      ? rawColor.slice(0, 7)
+      ? nearestNordColor(rawColor.slice(0, 7))
       : FALLBACK_COLORS[calendars.length % FALLBACK_COLORS.length];
 
     calendars.push({ href, displayName, isSubscription, sourceUrl, color });
