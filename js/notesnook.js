@@ -20,9 +20,15 @@ function textToHtml(text) {
 }
 
 // The API requires a non-empty title -- it does not fill one in on its own --
-// so this stands in for "no title" with the current local date and time.
+// so this stands in for "no title" with the current local date and time,
+// prefixed to identify notes sent from this extension. Built manually rather
+// than via toLocaleString, since locale/timeStyle formatting isn't guaranteed
+// to be zero-padded 24-hour.
 export function defaultNoteTitle(date = new Date()) {
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const pad = (n) => String(n).padStart(2, "0");
+  const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `Note: NTD -  ${dateStr} ${timeStr}`;
 }
 
 export async function sendNoteToNotesnook(apiKey, text, tagId = null) {
