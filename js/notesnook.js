@@ -28,7 +28,7 @@ export function defaultNoteTitle(date = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  return `Note: NTD -  ${dateStr} ${timeStr}`;
+  return `Note: NTD - ${dateStr} ${timeStr}`;
 }
 
 export async function sendNoteToNotesnook(apiKey, text, tagId = null) {
