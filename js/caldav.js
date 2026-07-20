@@ -211,11 +211,6 @@ export async function fetchIcsFeed(url) {
   return res.text();
 }
 
-/** Verify the given credentials can reach the calendar home. Throws on failure. */
-export async function testConnection(config) {
-  await listCalendars(config);
-}
-
 /**
  * Start a Nextcloud "Login Flow v2" — the same browser-based login the desktop
  * and mobile clients use. Returns { poll: { token, endpoint }, login } where
