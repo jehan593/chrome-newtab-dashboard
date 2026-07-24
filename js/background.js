@@ -39,7 +39,10 @@ async function refreshUpcomingMonths() {
     if (alreadyFresh) continue;
 
     try {
-      await refreshMonth(year, month, settings);
+      const { failedCalendars } = await refreshMonth(year, month, settings);
+      if (failedCalendars.length) {
+        console.warn(`Background refresh for ${monthKeyFor(year, month)} fell back to cached events for:`, failedCalendars);
+      }
     } catch (err) {
       console.warn(`Background calendar refresh failed for ${monthKeyFor(year, month)}:`, err);
     }
