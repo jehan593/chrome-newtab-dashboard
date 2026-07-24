@@ -51,13 +51,18 @@ function deserializeOccurrences(raw) {
   return raw.map((o) => ({ ...o, start: new Date(o.start), end: new Date(o.end) }));
 }
 
-/** Returns { events, stale } -- stale means an expired cache entry was returned
- *  as a placeholder and a background refresh should be kicked off by the caller. */
-async function loadMonthEvents(year, month, settings) {
-  const cached = await storage.getCachedEventsEntry(monthKeyFor(year, month));
-  if (cached) return { events: deserializeOccurrences(cached.events), stale: cached.stale };
-  const events = await refreshMonth(year, month, settings);
-  return { events, stale: false };
+/** Returns { events, stale, failedCalendars } -- stale means an expired cache entry was
+ *  returned as a placeholder and a background refresh should be kicked off by the caller.
+ *  forceRefresh skips the cache read so a fetch always happens, but (unlike clearing the
+ *  cache outright) leaves the previous entry in place for refreshMonth to fall back on if
+ *  a calendar's fetch fails. */
+async function loadMonthEvents(year, month, settings, forceRefresh) {
+  if (!forceRefresh) {
+    const cached = await storage.getCachedEventsEntry(monthKeyFor(year, month));
+    if (cached) return { events: deserializeOccurrences(cached.events), stale: cached.stale, failedCalendars: [] };
+  }
+  const { events, failedCalendars } = await refreshMonth(year, month, settings);
+  return { events, stale: false, failedCalendars };
 }
 
 function occOnDay(occ, date) {
@@ -221,6 +226,18 @@ export async function initCalendar(root, initialSettings) {
     return div.innerHTML;
   }
 
+  // Non-blocking: unlike the catch-block error path, this never clears monthEvents --
+  // calendars that fetched fine still render, only the failed ones fall back silently
+  // to their last-known events (see refreshMonth), and this just surfaces that fact.
+  function showPartialFailure(failedCalendars) {
+    if (failedCalendars && failedCalendars.length) {
+      errorEl.hidden = false;
+      errorEl.textContent = `Could not refresh: ${failedCalendars.join(", ")}. Showing last known events.`;
+    } else {
+      errorEl.hidden = true;
+    }
+  }
+
   async function render(forceRefresh = false, presetSettings = null) {
     const settings = presetSettings || (await storage.getSettings());
     monthLabelEl.textContent = monthLabel(viewYear, viewMonth);
@@ -240,16 +257,14 @@ export async function initCalendar(root, initialSettings) {
       return;
     }
 
-    if (forceRefresh) await storage.invalidateEventCache();
-
     const token = ++renderToken;
     const year = viewYear;
     const month = viewMonth;
 
     try {
-      const { events, stale } = await loadMonthEvents(year, month, settings);
+      const { events, stale, failedCalendars } = await loadMonthEvents(year, month, settings, forceRefresh);
       monthEvents = events;
-      errorEl.hidden = true;
+      showPartialFailure(failedCalendars);
       renderGrid(settings.weekStart ?? 1);
       renderAgenda();
 
@@ -258,10 +273,10 @@ export async function initCalendar(root, initialSettings) {
         // background and re-render in place once fresh data arrives, instead
         // of blocking the initial paint on the network.
         refreshMonth(year, month, settings)
-          .then((fresh) => {
+          .then(({ events: fresh, failedCalendars: freshFailed }) => {
             if (token !== renderToken) return; // user navigated away before this landed
             monthEvents = fresh;
-            errorEl.hidden = true;
+            showPartialFailure(freshFailed);
             renderGrid(settings.weekStart ?? 1);
             renderAgenda();
           })
