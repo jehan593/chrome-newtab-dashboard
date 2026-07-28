@@ -257,7 +257,17 @@ export async function pollLoginFlow(poll, { intervalMs = 1500, timeoutMs = 5 * 6
       continue; // transient network hiccup; keep polling
     }
     if (res.status === 200) {
-      return res.json();
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Observed on fresh (not-already-authenticated) logins: the extra
+        // login-form redirect before the grant page occasionally makes this
+        // first "success" poll come back as an HTML page instead of the
+        // token JSON. Treat it like "not ready yet" rather than failing
+        // outright -- the very next poll normally returns the real JSON.
+        continue;
+      }
     }
     // 404 means "still waiting for approval" per Nextcloud's Login Flow v2 spec.
   }
