@@ -514,6 +514,17 @@ body.newtab {
   color: var(--text-dim);
 }
 
+.task-edit-input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: inherit;
+  padding: 1px 4px;
+  resize: none;
+  overflow: hidden;
+  word-break: break-word;
+}
+
 .task-delete {
   visibility: hidden;
   background: transparent;
