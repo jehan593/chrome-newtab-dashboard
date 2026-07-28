@@ -117,6 +117,60 @@ export async function initTasks(root) {
     await persist();
   });
 
+  list.addEventListener("dblclick", (e) => {
+    const span = e.target.closest(".task-text");
+    if (!span) return;
+    const item = span.closest(".task-item");
+    const task = tasks.find((t) => t.id === item.dataset.id);
+    if (!task) return;
+
+    // Drag-and-drop on the parent <li> steals mousedown from the input
+    // (can't place a caret or select text) unless it's turned off for the
+    // duration of the edit.
+    item.draggable = false;
+
+    const editInput = document.createElement("textarea");
+    editInput.className = "task-edit-input";
+    editInput.rows = 1;
+    editInput.value = task.text;
+    span.replaceWith(editInput);
+
+    const autoGrow = () => {
+      editInput.style.height = "auto";
+      editInput.style.height = `${editInput.scrollHeight}px`;
+    };
+    autoGrow();
+    editInput.addEventListener("input", autoGrow);
+
+    editInput.focus();
+    editInput.select();
+
+    const finish = async (commit) => {
+      editInput.removeEventListener("blur", onBlur);
+      editInput.removeEventListener("keydown", onKeydown);
+      const newText = commit ? editInput.value.trim() : "";
+      if (newText && newText !== task.text) {
+        task.text = newText;
+        await persist();
+      }
+      render();
+    };
+
+    const onBlur = () => finish(true);
+    const onKeydown = (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        editInput.blur();
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        finish(false);
+      }
+    };
+
+    editInput.addEventListener("blur", onBlur);
+    editInput.addEventListener("keydown", onKeydown);
+  });
+
   list.addEventListener("dragstart", (e) => {
     const item = e.target.closest(".task-item");
     if (!item) return;
