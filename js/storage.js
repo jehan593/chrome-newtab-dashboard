@@ -148,6 +148,18 @@ export async function setLastGeoLocation(lat, lon, name = null) {
   await set({ lastGeoLocation: { lat, lon, name, fetchedAt: Date.now() } });
 }
 
+/**
+ * Like getLastGeoLocation, but also returns an expired fix instead of discarding
+ * it -- lets a caller fall back to a stale-but-still-valid position when a live
+ * navigator.geolocation refresh fails, rather than treating "no fresh fix yet"
+ * the same as "never had one" (see js/weather.js resolveLocation).
+ */
+export async function getLastGeoLocationEntry() {
+  const { lastGeoLocation } = await get("lastGeoLocation");
+  if (!lastGeoLocation) return null;
+  return { ...lastGeoLocation, stale: Date.now() - lastGeoLocation.fetchedAt > GEO_FIX_TTL_MS };
+}
+
 function isSameLocation(a, b) {
   return Math.abs(a.lat - b.lat) < 0.05 && Math.abs(a.lon - b.lon) < 0.05;
 }

@@ -82,8 +82,21 @@ export async function initWeather(root) {
       return { ...stored, name };
     }
 
-    if (!navigator.geolocation) return null;
+    // Only silently refresh via navigator.geolocation if the permission is
+    // already a recorded "granted" -- calling getCurrentPosition in that case
+    // does not show a prompt at all. Skip it otherwise (state "prompt" or
+    // "denied"): auto-triggering the actual permission prompt (no user
+    // gesture behind it) is the case Chrome/Windows handles flakily -- it can
+    // get silently dismissed (e.g. focus contention when Windows restores
+    // several tabs at once on relaunch), and a dismissed-without-a-decision
+    // prompt never persists, so it re-fires on every subsequent tab forever.
+    // The options page's "Use my location" button (js/options.js) requests
+    // it from a real click instead, which Chrome remembers reliably and is
+    // how the permission gets to "granted" in the first place.
+    if (!navigator.geolocation || !navigator.permissions) return null;
     try {
+      const status = await navigator.permissions.query({ name: "geolocation" });
+      if (status.state !== "granted") return null;
       const pos = await new Promise((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: false,
@@ -96,8 +109,15 @@ export async function initWeather(root) {
       const name = await reverseGeocode(lat, lon);
       await storage.setLastGeoLocation(lat, lon, name);
       return { name, lat, lon };
-    } catch (err) {
-      return null;
+    } catch {
+      // getCurrentPosition can fail transiently on Windows even with permission
+      // already granted -- the OS location service is sometimes slow to come up
+      // after sleep/relaunch (POSITION_UNAVAILABLE or a timeout), not an actual
+      // permission or location change. Fall back to the last known fix (even if
+      // past its TTL) rather than telling the user to re-set their location --
+      // the next hourly background refresh or tab open will retry for a fresh one.
+      const stale = await storage.getLastGeoLocationEntry();
+      return stale ? { name: stale.name, lat: stale.lat, lon: stale.lon } : null;
     }
   }
 
