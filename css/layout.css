@@ -244,7 +244,7 @@ body.newtab {
 
 .cal-day.is-selected {
   background: var(--nord2);
-  color: var(--nord6);
+  color: var(--nord7);
   font-weight: 600;
 }
 
