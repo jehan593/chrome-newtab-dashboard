@@ -8,10 +8,7 @@ body.newtab {
   margin: 0 auto;
 }
 
-/* Widget order/theme are applied from chrome.storage, which is async --
-   without this, the page briefly paints in default DOM order/theme before
-   main.js's init() reflows it, which reads as a flash on every new tab.
-   Hidden (not display:none) so layout/measurements still happen underneath. */
+/* Hide page until theme/order are applied from async storage. */
 .page.is-loading {
   visibility: hidden;
 }
@@ -35,20 +32,12 @@ body.newtab {
   border-color: var(--border);
 }
 
-/* Card-level refresh button (calendar, weather) -- a normal bordered button
-   like every other in-card action button (notes' copy/clear/send, calendar's
-   prev/next), not the page-header's ghost icon-btn style above (borderless
-   until hover), which is reserved for chrome sitting directly on the page
-   background rather than inside a card. */
+/* Refresh button: normal bordered style, not the ghost icon-btn style. */
 .refresh-btn {
   padding: 4px 7px;
 }
 
-/* Spins the refresh icon while its (async, network-bound) refresh is
-   actually in flight -- a spinner reads as "working" better than a flash
-   would for something that takes real time, unlike the instant copy/clear
-   actions elsewhere. Targets a wrapping span, not the button itself, so the
-   button's own border/background stays put and only the glyph rotates. */
+/* Spin animation while refresh is in flight. */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -75,8 +64,8 @@ body.newtab {
    browser's own grid layout algorithm reflows column count and placement on
    every resize for free.
    Tile height is intentionally fixed regardless of a widget's content; each
-   widget's own scrollable region (agenda list, task list, notes textarea,
-   weather body) flexes to fill it as a safety net for unusually long
+   widget's own scrollable region (agenda list, task list, notes textarea)
+   flexes to fill it as a safety net for unusually long
    content, but everything's internal sizing (fonts, padding, gaps) is
    deliberately compact so normal content fits without scrolling.
    align-items: stretch and min-height: 0 are spelled out explicitly (rather
@@ -103,17 +92,8 @@ body.newtab {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* No min-width here on purpose -- the grid's own minmax(260px, ...) column
-     width (above) already guarantees a card is never laid out narrower than
-     260px, and a grid item stretches to exactly its track's computed width
-     by default. Restating the same 260px as an independent min-width on the
-     card fights that computed width: the two are calculated separately, can
-     disagree by a sub-pixel from layout rounding, and when the min-width
-     wins by even a hair the grid overflows horizontally -- a page-wide
-     scrollbar for a mismatch you'd never see with the naked eye. The actual
-     "content overflows a too-narrow cell" guarantee lives on cal-day/
-     cal-weekday's own overflow: hidden below instead, which clips content to
-     whatever width the card actually ends up with, no floor required. */
+  /* No min-width — the grid's minmax(260px, ...) already guarantees a
+     minimum width. Content overflow is clipped by cal-day/cal-weekday. */
   overflow: hidden;
 }
 
@@ -132,9 +112,7 @@ body.newtab {
 .card-header {
   display: flex;
   align-items: center;
-  /* The h2 that used to sit at the start (making this space-between) is now
-     visually hidden -- flex-end keeps the remaining action buttons in their
-     familiar top-right corner instead of collapsing to the left edge. */
+  /* h2 is visually hidden — flex-end keeps action buttons top-right. */
   justify-content: flex-end;
   flex-wrap: wrap;
   row-gap: 6px;
@@ -145,9 +123,7 @@ body.newtab {
   margin: 0;
 }
 
-/* Small icon-only action button (Notes' copy/clear) -- shares the base
-   button's background/border for contrast against the card, just sized for
-   a compact glyph instead of text. */
+/* Small icon button — sized for a glyph, not text. */
 .mini-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -163,23 +139,20 @@ body.newtab {
   display: block;
 }
 
-/* Generic (not scoped to .mini-icon-btn) so any button -- the task Add
-   button included -- can use the same success/error flash via flashIcon(). */
+/* Generic — any button can use success/error flash via flashIcon(). */
 .is-success {
   color: var(--success);
   border-color: var(--success);
 }
 
-/* Same red as .is-error, but a distinct name -- this means "confirmed, shown
-   red because the action was destructive" (Clear), not "this failed". */
+/* "Confirmed" red for destructive actions (Clear), not "failed". */
 .is-error,
 .is-danger {
   color: var(--danger);
   border-color: var(--danger);
 }
 
-/* Clear is destructive -- hovering it hints at that with red instead of the
-   usual accent hover color other buttons get. */
+/* Clear is destructive — red hover instead of accent. */
 .mini-icon-btn[data-action="clear"]:hover {
   border-color: var(--danger);
   color: var(--danger);
@@ -191,9 +164,7 @@ body.newtab {
   display: flex;
   align-items: center;
   gap: 5px;
-  /* Spans the full card-header row (rather than shrinking to its own content
-     width) so the month label's flex: 1 below has actual room to expand into
-     and center itself between the prev/next buttons. */
+  /* Full width so the month label can center itself. */
   width: 100%;
 }
 
@@ -201,19 +172,13 @@ body.newtab {
   padding: 4px 7px;
 }
 
-/* A modest nudge away from next -- not pushed all the way to the card's edge
-   (that was the "too close to the border" problem), just enough to read as a
-   separate action from month navigation. */
+  /* Small nudge away from month nav. */
 .cal-nav .refresh-btn {
   margin-left: 10px;
 }
 
 .cal-month-label {
-  /* flex: 1 (not a fixed width) so the label actually centers itself in
-     whatever space is left between prev and next, rather than just sitting
-     next to prev with a fixed gap. min-width: 0 lets it shrink below its
-     content's natural width if the card is ever narrower than usual;
-     white-space: nowrap still guarantees it never wraps to two lines. */
+  /* flex: 1 so label centers between prev/next. min-width: 0 lets it shrink. */
   flex: 1;
   min-width: 0;
   font-size: var(--fs-md);
@@ -224,16 +189,10 @@ body.newtab {
 
 .cal-grid {
   display: grid;
-  /* minmax(0, 1fr), not bare 1fr -- bare fr tracks floor at their content's
-     min-content width (e.g. "SUN"), so a narrow card can force the 7th
-     column past the card's edge, where overflow: hidden then clips it. */
+  /* minmax(0, 1fr) prevents 7th column from pushing past card edge. */
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
-  /* .cal-agenda below already claims the card's leftover space via flex: 1;
-     without this, the grid is still a shrinkable flex child by default, so
-     it's the one that gives up space (unevenly across rows, since aspect-
-     ratio rows don't shrink uniformly) whenever the card is tight on height
-     -- that unevenness is what read as day numbers clipping/overlapping. */
+  /* flex-shrink: 0 so the grid gives space to the agenda below, not itself. */
   flex-shrink: 0;
 }
 
@@ -243,11 +202,7 @@ body.newtab {
   color: var(--text-dim);
   padding-bottom: 3px;
   text-transform: uppercase;
-  /* minmax(0, 1fr) columns (see .cal-grid) are explicitly allowed to shrink
-     past their label's min-content width -- without this, an over-squeezed
-     column doesn't clip its own text, it lets it paint over the neighboring
-     cell, which reads as the whole header "overlapping". overflow: hidden
-     makes a too-narrow column crop its own label instead. */
+  /* overflow: hidden so narrow columns crop their label, not bleed. */
   overflow: hidden;
   white-space: nowrap;
 }
@@ -258,24 +213,16 @@ body.newtab {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Reserves a strip at the bottom for the (absolutely-positioned) event dots,
-     so they land below the date number instead of overlapping its baseline --
-     centering now happens within the shrunk content box, not the full cell. */
+  /* Space at bottom for event dots below the date number. */
   padding-bottom: 7px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 11.5px;
-  /* Body's inherited line-height (1.45) gives the digit a line box taller
-     than the shrunk content box has room for, so overflow: hidden below
-     clips a sliver off its top and bottom. line-height: 1 keeps the box
-     close to the glyph's own height so it actually fits. */
+  /* line-height: 1 prevents inherited line-height from clipping the digit. */
   line-height: 1;
   color: var(--text);
   border: 1px solid transparent;
-  /* Same reasoning as .cal-weekday: a minmax(0, 1fr) column can shrink below
-     the date number's own width, and without this the digit bleeds into the
-     next cell instead of being clipped -- that bleed is what actually reads
-     as "the calendar numbers overlap" when the window shrinks. */
+  /* overflow: hidden so narrow columns clip digits, not bleed into neighbors. */
   overflow: hidden;
   white-space: nowrap;
 }
@@ -288,9 +235,7 @@ body.newtab {
   color: var(--text-dim);
 }
 
-/* highlight (not accent) -- today is informational, not a click target
-   itself (the whole cell is), and needs to read as distinct from
-   is-selected below, which *is* the result of an interaction. */
+/* highlight (not accent) — today is informational, not a click target. */
 .cal-day.is-today {
   border-color: var(--highlight);
   color: var(--highlight);
@@ -450,9 +395,7 @@ body.newtab {
   list-style: none;
   margin: 0;
   padding: 0;
-  /* Right padding keeps item cards from butting straight up against the
-     scrollbar when the list overflows -- the scrollbar sits in this gap
-     rather than right on the cards' edge. */
+  /* Right padding keeps items from butting against the scrollbar. */
   padding-right: 8px;
   display: flex;
   flex-direction: column;
@@ -549,105 +492,4 @@ body.newtab {
   padding: 6px 4px;
 }
 
-/* ---------- Weather ---------- */
 
-.weather-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.weather-message {
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-  margin: 0;
-}
-
-.weather-message a {
-  color: var(--accent);
-}
-
-.weather-error {
-  color: var(--danger);
-}
-
-.weather-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.weather-icon {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  /* highlight, not accent -- the glyph is informational (today's condition),
-     not a control. See --highlight in nord.css. */
-  color: var(--highlight);
-}
-
-.weather-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* The one hero number on the page -- everything else in the dashboard stays
-   small and quiet on purpose, so this is the only text allowed real size. */
-.weather-temp {
-  font-size: var(--fs-hero);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.weather-desc {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
-.weather-location {
-  margin-top: 6px;
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
-
-.weather-hilo {
-  margin-top: 2px;
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-}
-
-.weather-hourly {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
-}
-
-.weather-hour {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  font-size: var(--fs-2xs);
-  color: var(--text-muted);
-}
-
-.weather-hour-time {
-  color: var(--text-dim);
-}
-
-.weather-hour-icon {
-  width: 15px;
-  height: 15px;
-  color: var(--text-muted);
-}
-
-.weather-hour-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.weather-hour-temp {
-  color: var(--text);
-}

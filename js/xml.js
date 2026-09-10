@@ -1,8 +1,6 @@
-// Minimal namespace-aware XML parser for CalDAV multistatus responses.
-// DOMParser doesn't exist in the extension's background service worker (no
-// DOM there), so this hand-rolled parser is used everywhere instead, keeping
-// one code path that works identically on the new tab page, options page,
-// and the background worker.
+// Minimal namespace-aware XML parser for CalDAV responses.
+// DOMParser doesn't exist in the background service worker (no DOM),
+// so this is used everywhere instead.
 
 function decodeEntities(str) {
   return str
@@ -42,7 +40,7 @@ class XmlNode {
   }
 }
 
-/** Parse an XML string into a lightweight tree. Throws on malformed XML. */
+/** Parse XML string into a lightweight tree. */
 export function parseXML(xmlText) {
   let i = 0;
   const len = xmlText.length;

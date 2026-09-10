@@ -31,18 +31,13 @@ export async function initTasks(root) {
   let draggedId = null;
 
   function render() {
-    // FLIP: record where each existing item currently sits before rebuilding
-    // the list, so a task that jumps to a new position (e.g. sinking to the
-    // bottom on completion) can be animated from its old spot to its new one
-    // instead of just appearing there -- a sudden reshuffle reads as
-    // confusing ("did my click even register?") more than a sorted list does.
+    // FLIP animation: record positions before rebuild, then animate from old to new.
     const firstRects = new Map();
     for (const el of list.querySelectorAll(".task-item")) {
       firstRects.set(el.dataset.id, el.getBoundingClientRect());
     }
 
-    // Stable sort: done tasks sink to the bottom, but ties preserve `tasks`'
-    // own order, which is what drag-and-drop reordering actually rearranges.
+    // Stable sort: done tasks sink, ties preserve drag order.
     const sorted = [...tasks].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
 
     if (sorted.length === 0) {
@@ -72,9 +67,7 @@ export async function initTasks(root) {
 
       el.style.transition = "none";
       el.style.transform = `translate(${dx}px, ${dy}px)`;
-      // Double rAF: the browser needs to actually paint the inverted (start)
-      // position before switching on the transition, or it'll just skip
-      // straight to the end state with no visible animation.
+      // Double rAF: let browser paint the start position before transitioning.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           el.style.transition = "transform 220ms ease";
@@ -124,9 +117,7 @@ export async function initTasks(root) {
     const task = tasks.find((t) => t.id === item.dataset.id);
     if (!task) return;
 
-    // Drag-and-drop on the parent <li> steals mousedown from the input
-    // (can't place a caret or select text) unless it's turned off for the
-    // duration of the edit.
+    // Disable drag during editing so mousedown reaches the textarea.
     item.draggable = false;
 
     const editInput = document.createElement("textarea");

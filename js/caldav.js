@@ -1,6 +1,5 @@
-// Minimal CalDAV client: calendar discovery (PROPFIND) + event fetch (REPORT).
-// Relies on the extension's granted host permission to bypass normal page CORS
-// restrictions when talking to an arbitrary self-hosted Nextcloud origin.
+// Minimal CalDAV client: calendar discovery + event fetch.
+// Uses the extension's host permission to bypass CORS.
 
 import { parseXML } from "./xml.js";
 
@@ -18,12 +17,8 @@ function hexToRgb(hex) {
   return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
 }
 
-// Nextcloud lets a user pick any color from an unconstrained hex wheel, which
-// reads as visual noise against the extension's own Nord palette. Snapping
-// whatever they picked to its nearest color in FALLBACK_COLORS above (plain
-// RGB distance -- good enough for "which of 7 named hues is this closest to",
-// no need for perceptual color math) keeps calendars visually distinct from
-// each other while staying on-theme.
+// Snap user-picked hex colors to the nearest Nord palette color.
+// Keeps things on-theme while staying visually distinct.
 function nearestNordColor(hex) {
   const target = hexToRgb(hex);
   let closest = FALLBACK_COLORS[0];
@@ -39,9 +34,7 @@ function nearestNordColor(hex) {
   return closest;
 }
 
-// Bounds how long a slow/unreachable server can block the calendar widget --
-// without this, fetch() has no default timeout and a hung connection stalls
-// the UI indefinitely instead of falling back to cached data.
+// Timeout for slow/unreachable servers — fetch() has no default.
 const REQUEST_TIMEOUT_MS = 10000;
 
 function withTimeout() {
@@ -92,8 +85,7 @@ async function davRequest(url, method, username, appPassword, body, extraHeaders
   try {
     res = await fetch(url, {
       method,
-      credentials: "omit", // never send Nextcloud session cookies -- this must be pure Basic Auth,
-      // otherwise Nextcloud's CSRF middleware intercepts the request and rejects it before checking auth
+      credentials: "omit", // Pure Basic Auth — session cookies trigger CSRF rejection
       headers: {
         Authorization: authHeader(username, appPassword),
         "Content-Type": "application/xml; charset=utf-8",
@@ -135,7 +127,7 @@ function textOf(el, ns, local) {
   return found ? found.textContent.trim() : "";
 }
 
-/** List calendar collections (that support VEVENT) under the user's calendar home. */
+/** List calendars that support events under the user's calendar home. */
 export async function listCalendars({ baseUrl, username, appPassword }) {
   const url = calendarHomeUrl(baseUrl, username);
   const body = `<?xml version="1.0" encoding="utf-8" ?>
@@ -157,23 +149,19 @@ export async function listCalendars({ baseUrl, username, appPassword }) {
     const href = textOf(response, DAV_NS, "href");
     const resourcetype = response.getElementsByTagNameNS(DAV_NS, "resourcetype")[0];
     const isCalendar = !!(resourcetype && resourcetype.getElementsByTagNameNS(CALDAV_NS, "calendar").length);
-    // Externally-subscribed (ICS link) calendars are marked with cs:subscribed
-    // and don't always also carry the caldav:calendar resourcetype element.
+    // Subscriptions are marked with cs:subscribed, not always caldav:calendar.
     const isSubscription = !!(resourcetype && resourcetype.getElementsByTagNameNS(CS_NS, "subscribed").length);
     if (!isCalendar && !isSubscription) continue;
 
     const compSet = response.getElementsByTagNameNS(CALDAV_NS, "supported-calendar-component-set")[0];
     const comps = compSet ? Array.from(compSet.getElementsByTagNameNS(CALDAV_NS, "comp")) : [];
-    // Subscriptions' component-set doesn't reliably reflect the subscribed feed's contents, so don't filter those on it.
+    // Subscriptions' component-set doesn't reliably reflect feed contents.
     const supportsVEVENT = isSubscription || comps.length === 0 || comps.some((c) => c.getAttribute("name") === "VEVENT");
     if (!supportsVEVENT) continue;
 
     const displayName = textOf(response, DAV_NS, "displayname") || href;
 
-    // Nextcloud's CalDAV backend for a subscription only holds whatever its
-    // (often unreliable, cron-dependent) background refresh job last cached --
-    // it can be permanently empty. Surface the original feed URL so callers
-    // can fetch it directly instead.
+    // Surface the original feed URL so callers can fetch directly.
     let sourceUrl = null;
     if (isSubscription) {
       const sourceEl = response.getElementsByTagNameNS(CS_NS, "source")[0];
@@ -181,7 +169,7 @@ export async function listCalendars({ baseUrl, username, appPassword }) {
     }
 
     const rawColor = textOf(response, ICAL_NS, "calendar-color");
-    // Nextcloud sometimes returns 8-digit #RRGGBBAA; keep just the RGB part.
+    // Nextcloud sometimes returns #RRGGBBAA — keep just the RGB part.
     const color = /^#[0-9a-fA-F]{6}/.test(rawColor)
       ? nearestNordColor(rawColor.slice(0, 7))
       : FALLBACK_COLORS[calendars.length % FALLBACK_COLORS.length];
@@ -191,7 +179,7 @@ export async function listCalendars({ baseUrl, username, appPassword }) {
   return calendars;
 }
 
-/** Fetch a raw ICS feed directly (used for externally-subscribed calendars). */
+/** Fetch a raw ICS feed directly (for externally-subscribed calendars). */
 export async function fetchIcsFeed(url) {
   let res;
   const { signal, cancel } = withTimeout();
@@ -212,9 +200,8 @@ export async function fetchIcsFeed(url) {
 }
 
 /**
- * Start a Nextcloud "Login Flow v2" — the same browser-based login the desktop
- * and mobile clients use. Returns { poll: { token, endpoint }, login } where
- * `login` is a URL to open so the user can authenticate and approve access.
+ * Start Nextcloud Login Flow v2 — browser-based login.
+ * Returns { poll, login } where login is a URL to open.
  */
 export async function startLoginFlow(baseUrl) {
   const url = `${trimSlash(baseUrl)}/index.php/login/v2`;
@@ -235,8 +222,7 @@ export async function startLoginFlow(baseUrl) {
 }
 
 /**
- * Poll a Login Flow v2 session until the user approves it in the browser tab
- * (server keeps returning 404 while pending), or until timeout/cancellation.
+ * Poll a Login Flow v2 session until approved or timed out.
  * Resolves with { server, loginName, appPassword } on success.
  */
 export async function pollLoginFlow(poll, { intervalMs = 1500, timeoutMs = 5 * 60 * 1000 } = {}, isCancelled = () => false) {
@@ -260,12 +246,8 @@ export async function pollLoginFlow(poll, { intervalMs = 1500, timeoutMs = 5 * 6
       const text = await res.text();
       try {
         return JSON.parse(text);
-      } catch {
-        // Observed on fresh (not-already-authenticated) logins: the extra
-        // login-form redirect before the grant page occasionally makes this
-        // first "success" poll come back as an HTML page instead of the
-        // token JSON. Treat it like "not ready yet" rather than failing
-        // outright -- the very next poll normally returns the real JSON.
+    } catch {
+      // First poll sometimes returns HTML instead of JSON — skip it.
         continue;
       }
     }
@@ -274,10 +256,7 @@ export async function pollLoginFlow(poll, { intervalMs = 1500, timeoutMs = 5 * 6
   throw new Error("Login timed out. Please try again.");
 }
 
-/**
- * Fetch raw VEVENT ICS blobs from a calendar for the given date range via a
- * CalDAV calendar-query REPORT with a time-range filter.
- */
+/** Fetch raw VEVENT ICS blobs from a calendar for a date range. */
 export async function fetchEventsRaw({ baseUrl, username, appPassword, calendarHref }, rangeStart, rangeEnd) {
   const url = calendarHref.startsWith("http") ? calendarHref : trimSlash(baseUrl) + calendarHref;
   const body = `<?xml version="1.0" encoding="utf-8" ?>

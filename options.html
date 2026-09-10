@@ -8,31 +8,8 @@
   body {
     padding: 32px;
     max-width: 980px;
-    /* The base 15px body size (nord.css) is tuned for the newtab widgets --
-       everything on this page except inputs/buttons already overrides it with
-       an explicit smaller size, so inputs/buttons (which use font-size:
-       inherit) were the only things left oversized. */
+    /* Inputs/buttons use inherit, so override to keep them small. */
     font-size: 13.5px;
-  }
-  /* The two cards used to just stack, which on any wide window left most of
-     the screen empty and pushed content below the fold for no reason -- a
-     side-by-side layout uses that width instead of wasting it vertically. */
-  .settings-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    align-items: start;
-  }
-  @media (max-width: 760px) {
-    .settings-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  /* When only one of the two cards is enabled (its widget was toggled off),
-     let the remaining one use the full row instead of leaving the other
-     column empty. */
-  .settings-grid .is-full-width {
-    grid-column: 1 / -1;
   }
   h1 {
     font-size: 18px;
@@ -99,9 +76,7 @@
   #disconnect-btn {
     margin-top: 6px;
   }
-  /* Single source of truth for "what's the current state" -- a dot + one line
-     of text. Replaces having a separate badge AND a detail paragraph, which
-     just said the same thing twice in different words. */
+  /* Single status line: dot + text, replaces separate badge + paragraph. */
   .current {
     display: flex;
     align-items: center;
@@ -137,14 +112,6 @@
     border: none;
     border-top: 1px solid var(--border);
     margin: 20px 0;
-  }
-  .option-divider {
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin: 14px 0;
   }
   .calendar-list {
     display: flex;
@@ -201,29 +168,22 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .inline-row {
-    display: flex;
-    gap: 8px;
-  }
-  .inline-row input {
-    flex: 1;
-  }
+
 </style>
 </head>
 <body>
   <h1>New Tab Dashboard</h1>
-  <p class="subtitle">Connect your Nextcloud calendar (view-only). Notes and tasks stay local to this browser.</p>
+  <p class="subtitle">Nextcloud calendar (view-only). Notes and tasks stay local.</p>
 
   <section class="settings-card settings-section-spaced">
     <h2>Widgets</h2>
     <p class="hint widgets-hint">
-      Choose which widgets show up on the new tab page, and drag to set the order they appear in.
+      Choose which widgets appear on the new tab page, and drag to reorder.
     </p>
     <div class="calendar-list" id="widget-toggle-list"></div>
   </section>
 
-  <div class="settings-grid">
-  <section class="settings-card" id="nextcloud-settings-card">
+  <section class="settings-card settings-section-spaced" id="nextcloud-settings-card">
     <h2>Nextcloud Calendar</h2>
 
     <p class="current" id="current-connection">
@@ -234,7 +194,7 @@
     <div class="field">
       <label for="base-url">1. Server URL</label>
       <input id="base-url" type="url" placeholder="https://cloud.example.com" />
-      <p class="hint" id="base-url-hint">Logs in through your browser — no app password to create by hand.</p>
+      <p class="hint" id="base-url-hint">Logs in through your browser — no app password needed.</p>
     </div>
 
     <div class="row">
@@ -253,60 +213,6 @@
 
     <button type="button" id="disconnect-btn" hidden>Disconnect</button>
   </section>
-
-  <section class="settings-card" id="weather-settings-card">
-    <h2>Weather Location</h2>
-
-    <p class="current" id="weather-current">
-      <span class="current-dot"></span>
-      <span class="current-text">Not set yet.</span>
-    </p>
-
-    <div class="field">
-      <label for="weather-city">Set a city</label>
-      <div class="inline-row">
-        <input id="weather-city" type="text" placeholder="e.g. Colombo" autocomplete="off" />
-        <button type="button" id="weather-save-city-btn">Save</button>
-      </div>
-    </div>
-
-    <p class="option-divider">or</p>
-
-    <div class="row">
-      <button type="button" id="weather-use-geo-btn">Use my location</button>
-    </div>
-
-    <p class="status" id="weather-status"></p>
-  </section>
-
-  <section class="settings-card" id="notesnook-settings-card">
-    <h2>Notesnook</h2>
-
-    <p class="current" id="notesnook-current">
-      <span class="current-dot"></span>
-      <span class="current-text">Not set yet.</span>
-    </p>
-
-    <div class="field">
-      <label for="notesnook-api-key">Inbox API key</label>
-      <input id="notesnook-api-key" type="password" placeholder="Paste your inbox API key" autocomplete="off" />
-      <p class="hint">From Notesnook: Settings &gt; Inbox &gt; Create Key.</p>
-    </div>
-
-    <div class="field">
-      <label for="notesnook-tag-id">Tag ID (optional)</label>
-      <input id="notesnook-tag-id" type="text" placeholder="e.g. 67aecf3b9e1398484554bc90" autocomplete="off" />
-      <p class="hint">
-        In Notesnook, right-click a tag (e.g. "Quick") and choose Copy ID. Notes sent from the widget will get this tag,
-        and always use the current date and time as their title.
-      </p>
-    </div>
-
-    <button type="button" id="notesnook-save-btn">Save</button>
-
-    <p class="status" id="notesnook-status"></p>
-  </section>
-  </div>
 
   <script type="module" src="js/options.js"></script>
 </body>

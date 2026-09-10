@@ -12,7 +12,7 @@ function shellHTML() {
         <button type="button" class="refresh-btn" data-action="refresh" aria-label="Refresh events" title="Refresh"><span class="refresh-icon">⟳</span></button>
       </div>
     </div>
-    <p class="cal-empty" hidden>Connect your Nextcloud calendar in <a href="#" data-action="open-settings">settings</a> to see events here.</p>
+    <p class="cal-empty" hidden>Connect your Nextcloud calendar in <a href="#" data-action="open-settings">settings</a>.</p>
     <p class="cal-error" hidden></p>
     <div class="cal-grid"></div>
     <div class="cal-agenda">
@@ -51,11 +51,8 @@ function deserializeOccurrences(raw) {
   return raw.map((o) => ({ ...o, start: new Date(o.start), end: new Date(o.end) }));
 }
 
-/** Returns { events, stale, failedCalendars } -- stale means an expired cache entry was
- *  returned as a placeholder and a background refresh should be kicked off by the caller.
- *  forceRefresh skips the cache read so a fetch always happens, but (unlike clearing the
- *  cache outright) leaves the previous entry in place for refreshMonth to fall back on if
- *  a calendar's fetch fails. */
+/** Returns { events, stale, failedCalendars }. stale means the cache was
+ *  expired — paint now, refresh in the background. */
 async function loadMonthEvents(year, month, settings, forceRefresh) {
   if (!forceRefresh) {
     const cached = await storage.getCachedEventsEntry(monthKeyFor(year, month));
@@ -69,9 +66,8 @@ function occOnDay(occ, date) {
   const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const dayEnd = addDays(dayStart, 1);
   if (occ.end <= occ.start) {
-    // Zero/negative-duration events (e.g. Moodle-style "due at" deadlines with
-    // DTSTART === DTEND) are a single instant, not a range -- a plain overlap
-    // test fails for them when that instant lands exactly on a day boundary.
+    // Zero-duration events (e.g. "due at" deadlines) are a single instant,
+    // not a range — plain overlap test fails when the instant is on a boundary.
     return occ.start >= dayStart && occ.start < dayEnd;
   }
   return occ.start < dayEnd && occ.end > dayStart;
@@ -100,7 +96,7 @@ export async function initCalendar(root, initialSettings) {
   let viewMonth = today.getMonth();
   let selectedDate = today;
   let monthEvents = [];
-  let renderToken = 0; // bumped on every render() call so a stale background refresh can detect it's outdated
+  let renderToken = 0; // bumped on each render so stale background refreshs are discarded
 
   root.querySelector('[data-action="prev"]').addEventListener("click", () => shiftMonth(-1));
   root.querySelector('[data-action="next"]').addEventListener("click", () => shiftMonth(1));
@@ -226,9 +222,7 @@ export async function initCalendar(root, initialSettings) {
     return div.innerHTML;
   }
 
-  // Non-blocking: unlike the catch-block error path, this never clears monthEvents --
-  // calendars that fetched fine still render, only the failed ones fall back silently
-  // to their last-known events (see refreshMonth), and this just surfaces that fact.
+  // Non-blocking: failed calendars show last-known events instead of nothing.
   function showPartialFailure(failedCalendars) {
     if (failedCalendars && failedCalendars.length) {
       errorEl.hidden = false;
@@ -243,10 +237,7 @@ export async function initCalendar(root, initialSettings) {
     monthLabelEl.textContent = monthLabel(viewYear, viewMonth);
 
     const connected = !!(settings.nextcloud && settings.nextcloud.calendars && settings.nextcloud.calendars.length);
-    // The day grid itself (weekStart, today/selected highlighting, clicking
-    // around dates) doesn't depend on Nextcloud being connected -- only the
-    // event dots and agenda entries do. So paint it either way; the "connect
-    // in settings" hint just becomes a permanent note instead of a full swap.
+    // The day grid works even without Nextcloud — only events need it.
     emptyEl.hidden = connected;
     errorEl.hidden = true;
     renderGrid(settings.weekStart ?? 1);
@@ -269,9 +260,7 @@ export async function initCalendar(root, initialSettings) {
       renderAgenda();
 
       if (stale) {
-        // Paint the slightly-old cached data now, then quietly refresh in the
-        // background and re-render in place once fresh data arrives, instead
-        // of blocking the initial paint on the network.
+        // Paint cached data now, refresh in background.
         refreshMonth(year, month, settings)
           .then(({ events: fresh, failedCalendars: freshFailed }) => {
             if (token !== renderToken) return; // user navigated away before this landed

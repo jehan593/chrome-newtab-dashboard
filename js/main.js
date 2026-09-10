@@ -1,14 +1,12 @@
 import { initCalendar } from "./calendar.js";
 import { initNotes } from "./notes.js";
 import { initTasks } from "./tasks.js";
-import { initWeather } from "./weather.js";
 import * as storage from "./storage.js";
 
 const WIDGETS = {
   calendar: { elementId: "calendar-widget", init: initCalendar },
   tasks: { elementId: "tasks-widget", init: initTasks },
   notes: { elementId: "notes-widget", init: initNotes },
-  weather: { elementId: "weather-widget", init: initWeather },
 };
 
 function applyTheme(theme) {
@@ -29,10 +27,8 @@ async function init() {
   const grid = document.querySelector(".grid");
   const initPromises = [];
 
-  // Theme/order come from async chrome.storage reads, so the page starts
-  // hidden (see newtab.html/.page.is-loading) to avoid a flash of default
-  // theme/order before they're applied. The finally guarantees it's revealed
-  // even if something above throws, rather than leaving the page blank.
+  // Theme/order come from async storage reads, so the page starts hidden
+  // to avoid a flash before they're applied.
   try {
     const settings = await storage.getSettings();
     applyTheme(settings.theme);
@@ -49,12 +45,8 @@ async function init() {
 
     const { enabled, order } = await storage.getWidgetConfig();
 
-    // Reorders the actual DOM nodes to match the saved order, then leaves
-    // placement entirely to CSS grid auto-flow (row-major, left to right,
-    // wrapping to the next row -- see layout.css's .grid). No explicit
-    // grid-column/grid-row is ever set, so there's no position math to get
-    // wrong when the window resizes -- the browser recomputes column count
-    // and placement itself, for free.
+    // Reorder DOM nodes to match saved order. CSS grid auto-flow
+    // handles placement — no explicit grid positions needed.
     for (const id of order) {
       const widget = WIDGETS[id];
       const el = widget && document.getElementById(widget.elementId);
