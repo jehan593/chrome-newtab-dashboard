@@ -243,8 +243,8 @@ body.newtab {
 }
 
 .cal-day.is-selected {
-  background: var(--nord2);
-  color: var(--nord7);
+  background: var(--selected-bg);
+  color: var(--selected-text);
   font-weight: 600;
 }
 
