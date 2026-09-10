@@ -38,6 +38,9 @@
   --text-muted: var(--nord4);
   /* Lightened blend of nord3/nord4 — dimmer than body text but still legible (~4:1+). */
   --text-dim: #98a2b3;
+  /* Darker than --bg-elevated so event dots stay visible on the selected day. */
+  --selected-bg: var(--nord2);
+  --selected-text: var(--nord7);
 }
 
 :root[data-theme="light"] {
@@ -47,6 +50,8 @@
   --text: var(--nord0);
   --text-muted: var(--nord2);
   --text-dim: var(--nord3);
+  --selected-bg: var(--nord4);
+  --selected-text: var(--nord0);
 }
 
 @media (prefers-color-scheme: light) {
@@ -57,6 +62,8 @@
     --text: var(--nord0);
     --text-muted: var(--nord2);
     --text-dim: var(--nord3);
+    --selected-bg: var(--nord4);
+    --selected-text: var(--nord0);
   }
 }
 
