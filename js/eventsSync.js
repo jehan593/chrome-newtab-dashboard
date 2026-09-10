@@ -1,7 +1,6 @@
-// Shared "fetch + parse + expand + cache one month's events" logic, used by
-// both the calendar widget (js/calendar.js) and the background refresh job
-// (js/background.js). Kept dependency-free of the DOM so it's safe to import
-// from a service worker.
+// Shared fetch + parse + cache logic for one month's events.
+// Used by both the calendar widget and the background refresh job.
+// DOM-free so it's safe to import from a service worker.
 
 import * as storage from "./storage.js";
 import * as caldav from "./caldav.js";
@@ -19,12 +18,9 @@ function deserializeOccurrences(raw) {
   return raw.map((o) => ({ ...o, start: new Date(o.start), end: new Date(o.end) }));
 }
 
-/** Fetch, parse, expand, and cache one month's merged events across all configured calendars.
- *  If a given calendar's fetch fails, that calendar falls back to its events from the
- *  previous cache entry (if any) instead of contributing nothing -- so one calendar being
- *  temporarily unreachable doesn't wipe out its previously-known events for other calendars
- *  to lose too, since the whole month gets re-cached below. Failed calendar names are
- *  returned so callers can surface a non-blocking "showing last known events" notice. */
+/** Fetch, parse, expand, and cache one month's events across all calendars.
+ *  If a calendar's fetch fails, it falls back to cached data instead of
+ *  disappearing. Returns { events, failedCalendars }. */
 export async function refreshMonth(year, month, settings) {
   const rangeStart = new Date(year, month, 1);
   const rangeEnd = new Date(year, month + 1, 1);
@@ -36,9 +32,7 @@ export async function refreshMonth(year, month, settings) {
   const perCalendar = await Promise.all(
     calendars.map(async (cal) => {
       try {
-        // Subscription (external ICS link) calendars' CalDAV backend cache can be
-        // permanently empty depending on the server's cron setup, so fetch the
-        // original feed directly instead of querying Nextcloud for it.
+        // Subscriptions can have empty CalDAV caches — fetch the feed directly.
         const rawBlobs =
           cal.isSubscription && cal.sourceUrl
             ? [await caldav.fetchIcsFeed(cal.sourceUrl)]

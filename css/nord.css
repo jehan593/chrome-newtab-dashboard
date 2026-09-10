@@ -19,23 +19,14 @@
   --accent: var(--nord8);
   --danger: var(--nord11);
   --success: var(--nord14);
-  /* Distinct from --accent on purpose: accent means "interactive" (links,
-     hover, focus rings, the selected calendar day). Highlight means "notable
-     but not actionable" (today's date, an event marker, the weather glyph)
-     -- so a glance can tell "this responds to a click" from "this is just
-     information" instead of everything living in the same blue. */
+  /* Distinct from --accent: accent = interactive, highlight = informational. */
   --highlight: var(--nord15);
 
-  /* A real type scale instead of ad-hoc half-pixel tuning per widget --
-     everything under a fixed 251px tile pulls from these same five steps.
-     --fs-hero is reserved for exactly one thing (the weather temperature):
-     the rest of the dashboard is small and quiet by design, so the one
-     number worth a glance should be the only text with real size. */
+  /* Shared type scale for all widgets under the fixed 251px tile. */
   --fs-2xs: 10px;
   --fs-xs: 11px;
   --fs-sm: 12px;
   --fs-md: 13px;
-  --fs-hero: 34px;
 }
 
 :root,
@@ -45,9 +36,7 @@
   --border: var(--nord2);
   --text: var(--nord6);
   --text-muted: var(--nord4);
-  /* nord3 alone is ~1.4:1 against nord0/nord1 -- far too low to read. This is
-     a lightened blend of nord3/nord4 instead, keeping the "dimmer than body
-     text" hierarchy while staying legible (~4:1+) on dark backgrounds. */
+  /* Lightened blend of nord3/nord4 — dimmer than body text but still legible (~4:1+). */
   --text-dim: #98a2b3;
 }
 
@@ -99,10 +88,7 @@ button {
   font-family: inherit;
   font-size: inherit;
   color: var(--text);
-  /* Buttons sit on --bg-elevated cards (in both the newtab widgets and
-     settings page) -- matching --bg-elevated here made them blend straight
-     into their container with only a faint border left to read as a button.
-     --bg (the same surface inputs already use) gives real contrast instead. */
+  /* Match --bg (same as inputs) so buttons don't blend into the card. */
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -150,9 +136,7 @@ select {
   color: var(--text-dim);
 }
 
-/* Visually hidden but still reachable by screen readers -- used for widget
-   titles that are dropped visually (the content makes the widget's purpose
-   obvious on its own) but should stay as an accessible heading landmark. */
+/* Visually hidden but accessible to screen readers — for widget headings. */
 .sr-only {
   position: absolute;
   width: 1px;

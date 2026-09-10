@@ -1,5 +1,5 @@
-// Minimal iCalendar (RFC 5545) parser: VEVENT properties + basic RRULE expansion.
-// Not a full RFC 5545 implementation -- see README limitations.
+// Minimal iCalendar parser: VEVENT properties + basic RRULE expansion.
+// Covers common cases — not a full RFC 5545 implementation.
 
 const WEEKDAY_MAP = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
@@ -83,7 +83,7 @@ function startOfWeek(date) {
   return d;
 }
 
-/** Parse raw ICS text (a single calendar or a fragment) into a flat list of VEVENTs. */
+/** Parse ICS text into a flat list of VEVENTs. */
 export function parseICS(icsText) {
   const lines = unfoldLines(icsText);
   const events = [];
@@ -218,7 +218,7 @@ function generateOccurrenceDates(dtstart, rule, rangeEnd) {
     else if (rule.freq === "WEEKLY") cursor = addDays(cursor, 7 * rule.interval);
     else if (rule.freq === "MONTHLY") cursor = addMonths(cursor, rule.interval);
     else if (rule.freq === "YEARLY") cursor = addYears(cursor, rule.interval);
-    else break; // unsupported FREQ (e.g. SECONDLY/MINUTELY/HOURLY): treat as a single occurrence
+      else break; // unsupported FREQ — treat as single occurrence
   }
   return dates;
 }
@@ -228,10 +228,9 @@ function toOccurrence(ev, start, end) {
 }
 
 /**
- * Expand parsed VEVENTs (including recurring ones) into concrete occurrences
- * overlapping [rangeStart, rangeEnd). Supports FREQ=DAILY/WEEKLY/MONTHLY/YEARLY
- * with INTERVAL, COUNT, UNTIL and simple BYDAY (weekly only). Does not handle
- * RECURRENCE-ID overrides, BYSETPOS, or other advanced RFC 5545 features.
+ * Expand VEVENTs (including recurring) into concrete occurrences
+ * in [rangeStart, rangeEnd). Supports DAILY/WEEKLY/MONTHLY/YEARLY
+ * with INTERVAL, COUNT, UNTIL, and simple BYDAY.
  */
 export function expandEvents(events, rangeStart, rangeEnd) {
   const occurrences = [];
