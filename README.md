@@ -2,6 +2,8 @@
 
 A Chrome new tab page with calendar, tasks, and notes — styled with [Nord](https://www.nordtheme.com/) colors.
 
+> **FYI:** this project is fully vibe-coded.
+
 ## Features
 
 - **Calendar** — shows events from your Nextcloud calendars in a month view
@@ -24,7 +26,3 @@ Click **Connect with Nextcloud login** in settings, enter your server URL, and l
 - Nextcloud credentials are stored in `chrome.storage.local` as plaintext — same as Chrome stores cookies. Don't use this on a shared machine.
 - Tasks and notes stay in your browser only.
 - Calendar refreshes once an hour in the background.
-
-## FYI
-
-This project is fully vibe coded.
