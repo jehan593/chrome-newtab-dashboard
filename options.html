@@ -6,28 +6,27 @@
 <link rel="stylesheet" href="css/nord.css" />
 <style>
   body {
-    padding: 32px;
+    padding: 16px;
     max-width: 980px;
     /* Inputs/buttons use inherit, so override to keep them small. */
     font-size: 13.5px;
   }
   h1 {
-    font-size: 18px;
+    font-size: 16px;
     margin: 0 0 4px;
   }
   .subtitle {
     color: var(--text-muted);
     font-size: 13px;
-    margin: 0 0 24px;
+    margin: 0 0 16px;
   }
   .settings-card {
     background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 20px 22px;
+    border-radius: var(--radius);
+    padding: 16px;
   }
   .settings-section-spaced {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
   .settings-card h2 {
     margin: 0 0 14px;
@@ -73,9 +72,6 @@
   .status.is-ok {
     color: var(--success);
   }
-  #disconnect-btn {
-    margin-top: 6px;
-  }
   /* Single status line: dot + text, replaces separate badge + paragraph. */
   .current {
     display: flex;
@@ -83,11 +79,10 @@
     gap: 8px;
     font-size: 13px;
     color: var(--text-muted);
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding: 9px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    background: var(--bg-nested);
+    border-radius: var(--radius-sm);
   }
   .current-dot {
     width: 7px;
@@ -103,10 +98,10 @@
     color: var(--text);
   }
   .current.is-warning .current-dot {
-    background: var(--nord13);
+    background: var(--nord12);
   }
   .current.is-warning {
-    color: var(--nord13);
+    color: var(--nord12);
   }
   .step-divider {
     border: none;
@@ -118,9 +113,8 @@
     flex-direction: column;
     gap: 8px;
     padding: 10px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    background: var(--bg-nested);
+    border-radius: var(--radius-sm);
   }
   .calendar-list label {
     display: flex;
@@ -198,8 +192,8 @@
     </div>
 
     <div class="row">
-      <button type="button" id="connect-btn">Connect with Nextcloud login</button>
-      <button type="button" id="cancel-btn" hidden>Cancel</button>
+      <button type="button" class="btn-primary" id="connect-btn">Connect with Nextcloud login</button>
+      <button type="button" class="btn-text" id="cancel-btn" hidden>Cancel</button>
     </div>
 
     <div class="field" id="calendars-field" hidden>
@@ -210,8 +204,6 @@
     </div>
 
     <p class="status" id="status"></p>
-
-    <button type="button" id="disconnect-btn" hidden>Disconnect</button>
   </section>
 
   <script type="module" src="js/options.js"></script>

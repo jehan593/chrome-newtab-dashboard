@@ -7,7 +7,6 @@ const calendarsFieldEl = document.getElementById("calendars-field");
 const calendarListEl = document.getElementById("calendar-list");
 const connectBtn = document.getElementById("connect-btn");
 const cancelBtn = document.getElementById("cancel-btn");
-const disconnectBtn = document.getElementById("disconnect-btn");
 const statusEl = document.getElementById("status");
 const currentEl = document.getElementById("current-connection");
 
@@ -51,8 +50,15 @@ function getCheckedCalendars() {
   }));
 }
 
+// Single toggle button: Connect (filled accent) when idle, Disconnect (filled red) when connected.
+function updateConnectButton(nc) {
+  connectBtn.classList.toggle("btn-primary", !nc);
+  connectBtn.classList.toggle("btn-danger", !!nc);
+  connectBtn.textContent = nc ? "Disconnect" : "Connect with Nextcloud login";
+}
+
 function updateCurrentText(nc) {
-  disconnectBtn.hidden = !nc;
+  updateConnectButton(nc);
   baseUrlHintEl.hidden = !!nc;
   if (!nc) {
     setCurrentStatus(currentEl, "neutral", "Not connected yet.");
@@ -91,19 +97,35 @@ async function loadExisting() {
       await storage.invalidateEventCache();
       updateCurrentText(nextcloud);
     }
-
-    showStatus("Check off the calendars you want to see.", false);
   } catch (err) {
     setCurrentStatus(
       currentEl,
       "warning",
       `Connected to ${nc.baseUrl} as ${nc.username}, but couldn't refresh the calendar list (${err.message}).`
     );
-    showStatus(`Could not refresh calendars. Use "Connect with Nextcloud login" to reconnect.`, true);
+    showStatus("Could not refresh calendars. Try disconnecting and connecting again.", true);
   }
 }
 
+async function disconnect() {
+  await storage.setSettings({ nextcloud: null });
+  await storage.invalidateEventCache();
+  calendarsFieldEl.hidden = true;
+  calendarListEl.innerHTML = "";
+  pendingCreds = null;
+  updateCurrentText(null);
+  baseUrlInput.value = "";
+  showStatus("Disconnected. Calendar events cleared from the new tab page.", false);
+}
+
 connectBtn.addEventListener("click", async () => {
+  // When connected (or mid-configuration), the same button acts as Disconnect.
+  const current = await storage.getSettings();
+  if (current.nextcloud || pendingCreds) {
+    await disconnect();
+    return;
+  }
+
   const baseUrl = baseUrlInput.value.trim().replace(/\/+$/, "");
   if (!baseUrl) {
     showStatus("Enter your Nextcloud server URL first.", true);
@@ -152,7 +174,8 @@ connectBtn.addEventListener("click", async () => {
         : [];
     populateCalendarList(calendars, previousHrefs);
     pendingCreds = { baseUrl: finalBaseUrl, username: loginName, appPassword };
-    showStatus(`Connected as ${loginName}. Check off the calendars you want to see.`, false);
+    updateConnectButton(pendingCreds);
+    showStatus(`Connected as ${loginName}.`, false);
   } catch (err) {
     if (err.message === "cancelled") {
       showStatus("Login cancelled.", false);
@@ -201,17 +224,6 @@ calendarListEl.addEventListener("change", async () => {
       false
     );
   }
-});
-
-disconnectBtn.addEventListener("click", async () => {
-  await storage.setSettings({ nextcloud: null });
-  await storage.invalidateEventCache();
-  calendarsFieldEl.hidden = true;
-  calendarListEl.innerHTML = "";
-  pendingCreds = null;
-  updateCurrentText(null);
-  baseUrlInput.value = "";
-  showStatus("Disconnected. Calendar events cleared from the new tab page.", false);
 });
 
 loadExisting();

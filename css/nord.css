@@ -16,10 +16,11 @@
   --nord14: #a3be8c;
   --nord15: #b48ead;
 
-  --accent: var(--nord8);
+  /* Primary interactive accent = nord9; shimmering nord8 is reserved for
+     informational highlights only. highlight stays distinct (nord15). */
+  --accent: var(--nord9);
   --danger: var(--nord11);
   --success: var(--nord14);
-  /* Distinct from --accent: accent = interactive, highlight = informational. */
   --highlight: var(--nord15);
 
   /* Shared type scale for all widgets under the fixed 251px tile. */
@@ -27,13 +28,20 @@
   --fs-xs: 11px;
   --fs-sm: 12px;
   --fs-md: 13px;
+
+  /* 4pt rhythm: 12px for cards/inputs, 8px for small media and controls. */
+  --radius: 12px;
+  --radius-sm: 8px;
 }
 
 :root,
 :root[data-theme="dark"] {
   --bg: var(--nord0);
   --bg-elevated: var(--nord1);
+  --bg-nested: var(--nord2);
   --border: var(--nord2);
+  --quiet-border: var(--nord3);
+  --hover-bg: var(--nord2);
   --text: var(--nord6);
   --text-muted: var(--nord4);
   /* Lightened blend of nord3/nord4 — dimmer than body text but still legible (~4:1+). */
@@ -46,7 +54,10 @@
 :root[data-theme="light"] {
   --bg: var(--nord6);
   --bg-elevated: var(--nord5);
+  --bg-nested: var(--nord4);
   --border: var(--nord4);
+  --quiet-border: var(--nord3);
+  --hover-bg: var(--nord4);
   --text: var(--nord0);
   --text-muted: var(--nord2);
   --text-dim: var(--nord3);
@@ -58,7 +69,10 @@
   :root:not([data-theme]) {
     --bg: var(--nord6);
     --bg-elevated: var(--nord5);
+    --bg-nested: var(--nord4);
     --border: var(--nord4);
+    --quiet-border: var(--nord3);
+    --hover-bg: var(--nord4);
     --text: var(--nord0);
     --text-muted: var(--nord2);
     --text-dim: var(--nord3);
@@ -94,14 +108,13 @@ a {
 button {
   font-family: inherit;
   font-size: inherit;
-  color: var(--text);
-  /* Match --bg (same as inputs) so buttons don't blend into the card. */
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--quiet-border);
+  border-radius: var(--radius-sm);
   padding: 6px 10px;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease, filter 0.15s ease;
 }
 
 button:hover {
@@ -115,8 +128,77 @@ button:disabled {
 }
 
 button:disabled:hover {
-  border-color: var(--border);
-  color: var(--text);
+  border-color: var(--quiet-border);
+  color: var(--accent);
+}
+
+/* Filled primary — one main next step per screen. */
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--nord0);
+  font-weight: 600;
+}
+
+.btn-primary:not(:disabled):hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--nord0);
+  filter: brightness(1.12);
+}
+
+.btn-primary:disabled:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--nord0);
+  filter: none;
+}
+
+/* Filled destructive — clears credentials and stops background sync. */
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--nord6);
+  font-weight: 600;
+}
+
+.btn-danger:not(:disabled):hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--nord6);
+  filter: brightness(1.12);
+}
+
+.btn-danger:disabled:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--nord6);
+  filter: none;
+}
+
+/* Text-only action — dismissals and cancellations (blue) or destructive (red). */
+.btn-text {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.btn-text:not(:disabled):hover {
+  background: var(--hover-bg);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.btn-text-danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.btn-text-danger:not(:disabled):hover {
+  background: var(--hover-bg);
+  border-color: transparent;
+  color: var(--danger);
 }
 
 button:focus-visible,
@@ -135,7 +217,7 @@ select {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 6px 8px;
 }
 
