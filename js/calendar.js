@@ -103,9 +103,13 @@ export async function initCalendar(root, initialSettings) {
   const refreshBtn = root.querySelector('[data-action="refresh"]');
   refreshBtn.addEventListener("click", async () => {
     refreshBtn.classList.add("is-spinning");
+    // Keep the spinner visible long enough to be seen even on fast refreshes.
+    const started = Date.now();
     try {
       await render(true);
     } finally {
+      const elapsed = Date.now() - started;
+      await new Promise((r) => setTimeout(r, Math.max(0, 400 - elapsed)));
       refreshBtn.classList.remove("is-spinning");
     }
   });

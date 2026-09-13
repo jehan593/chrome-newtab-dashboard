@@ -1,6 +1,6 @@
 body.newtab {
   min-height: 100vh;
-  padding: 32px;
+  padding: 16px;
 }
 
 .page {
@@ -18,13 +18,23 @@ body.newtab {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   padding: 4px 8px;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .icon-btn:hover {
@@ -77,7 +87,7 @@ body.newtab {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   grid-auto-rows: 251px;
   align-items: stretch;
-  gap: 14px;
+  gap: 12px;
 }
 
 .card.is-large {
@@ -86,9 +96,8 @@ body.newtab {
 
 .card {
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
+  border-radius: var(--radius);
+  padding: 12px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -116,7 +125,7 @@ body.newtab {
   justify-content: flex-end;
   flex-wrap: wrap;
   row-gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .card-header h2 {
@@ -131,6 +140,7 @@ body.newtab {
   padding: 3px 7px;
   font-size: 12px;
   line-height: 1;
+  border-radius: var(--radius-sm);
 }
 
 .mini-icon-btn svg {
@@ -198,7 +208,7 @@ body.newtab {
 
 .cal-weekday {
   text-align: center;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   padding-bottom: 3px;
   text-transform: uppercase;
@@ -215,9 +225,9 @@ body.newtab {
   justify-content: center;
   /* Space at bottom for event dots below the date number. */
   padding-bottom: 7px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   /* line-height: 1 prevents inherited line-height from clipping the digit. */
   line-height: 1;
   color: var(--text);
@@ -265,7 +275,7 @@ body.newtab {
 }
 
 .cal-agenda {
-  margin-top: 10px;
+  margin-top: 12px;
   border-top: 1px solid var(--border);
   padding-top: 8px;
   flex: 1;
@@ -284,13 +294,19 @@ body.newtab {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .agenda-item {
   display: flex;
   gap: 8px;
-  padding: 3px 0;
+  padding: 6px 8px;
   font-size: var(--fs-xs);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
 .agenda-item .time {
@@ -317,10 +333,18 @@ body.newtab {
   margin-right: 5px;
 }
 
-.agenda-empty,
+.agenda-empty {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  margin: auto;
+  text-align: center;
+}
+
 .cal-empty {
   color: var(--text-dim);
   font-size: var(--fs-sm);
+  margin: 12px 0;
+  text-align: center;
 }
 
 .cal-error {
@@ -336,7 +360,7 @@ body.newtab {
 
 .notes-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .notes-textarea {
@@ -366,8 +390,8 @@ body.newtab {
 
 .task-form {
   display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .task-form input {
@@ -399,7 +423,7 @@ body.newtab {
   padding-right: 8px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -410,7 +434,7 @@ body.newtab {
   align-items: center;
   gap: 10px;
   padding: 5px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   border: 1px solid var(--border);
 }
@@ -490,6 +514,8 @@ body.newtab {
   color: var(--text-dim);
   font-size: var(--fs-sm);
   padding: 6px 4px;
+  text-align: center;
+  margin: auto;
 }
 
 
