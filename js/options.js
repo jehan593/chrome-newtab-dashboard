@@ -13,6 +13,18 @@ const currentEl = document.getElementById("current-connection");
 let pendingCreds = null;
 let cancelled = false;
 
+// Options page must follow the saved theme too (new tab page applies its own).
+function applyTheme(theme) {
+  if (theme === "dark" || theme === "light") {
+    document.documentElement.setAttribute("data-theme", theme);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+const initialSettings = await storage.getSettings();
+applyTheme(initialSettings.theme);
+
 function showStatus(message, isError) {
   statusEl.textContent = message;
   statusEl.className = "status" + (isError ? " is-error" : message ? " is-ok" : "");
@@ -97,6 +109,8 @@ async function loadExisting() {
       await storage.invalidateEventCache();
       updateCurrentText(nextcloud);
     }
+
+    showStatus("", false);
   } catch (err) {
     setCurrentStatus(
       currentEl,
