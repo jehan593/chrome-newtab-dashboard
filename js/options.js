@@ -10,6 +10,13 @@ const cancelBtn = document.getElementById("cancel-btn");
 const statusEl = document.getElementById("status");
 const currentEl = document.getElementById("current-connection");
 
+document.getElementById("back-btn").addEventListener("click", () => {
+  // Only go back when we were navigated from the dashboard; a fresh
+  // open (e.g. from chrome://extensions) has nothing behind us.
+  if (history.length > 1) history.back();
+  else window.close();
+});
+
 let pendingCreds = null;
 let cancelled = false;
 

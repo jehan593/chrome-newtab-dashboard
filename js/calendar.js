@@ -115,7 +115,7 @@ export async function initCalendar(root, initialSettings) {
   });
   root.querySelector('[data-action="open-settings"]').addEventListener("click", (e) => {
     e.preventDefault();
-    chrome.runtime.openOptionsPage();
+    location.assign(chrome.runtime.getURL("options.html"));
   });
 
   async function shiftMonth(delta) {
