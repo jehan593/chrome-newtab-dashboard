@@ -40,7 +40,9 @@ async function init() {
     });
 
     document.querySelector(".settings-btn").addEventListener("click", () => {
-      chrome.runtime.openOptionsPage();
+      // Same-tab navigation so the browser Back button returns to the
+      // dashboard (openOptionsPage() opens a tab with no history entry).
+      location.assign(chrome.runtime.getURL("options.html"));
     });
 
     const { enabled, order } = await storage.getWidgetConfig();
