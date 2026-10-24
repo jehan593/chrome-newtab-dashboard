@@ -44,7 +44,7 @@ body.newtab {
 
 /* Refresh button: normal bordered style, not the ghost icon-btn style. */
 .refresh-btn {
-  padding: 4px 7px;
+  padding: 4px 5px;
 }
 
 /* Spin animation while refresh is in flight. */
@@ -55,7 +55,9 @@ body.newtab {
 }
 
 .refresh-icon {
-  display: inline-block;
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .is-spinning .refresh-icon {
