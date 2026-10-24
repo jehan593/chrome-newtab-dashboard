@@ -9,7 +9,7 @@ function shellHTML() {
         <button type="button" data-action="prev" aria-label="Previous month">‹</button>
         <span class="cal-month-label"></span>
         <button type="button" data-action="next" aria-label="Next month">›</button>
-        <button type="button" class="refresh-btn" data-action="refresh" aria-label="Refresh events" title="Refresh"><span class="refresh-icon">⟳</span></button>
+        <button type="button" class="refresh-btn" data-action="refresh" aria-label="Refresh events" title="Refresh"><svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
       </div>
     </div>
     <p class="cal-empty" hidden>Connect your Nextcloud calendar in <a href="#" data-action="open-settings">settings</a>.</p>
