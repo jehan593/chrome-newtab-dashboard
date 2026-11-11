@@ -1,12 +1,14 @@
 import { initCalendar } from "./calendar.js";
 import { initNotes } from "./notes.js";
 import { initTasks } from "./tasks.js";
+import { initTopSites } from "./topSites.js";
 import * as storage from "./storage.js";
 
 const WIDGETS = {
   calendar: { elementId: "calendar-widget", init: initCalendar },
   tasks: { elementId: "tasks-widget", init: initTasks },
   notes: { elementId: "notes-widget", init: initNotes },
+  topSites: { elementId: "top-sites-widget", init: initTopSites },
 };
 
 function applyTheme(theme) {
