@@ -30,7 +30,7 @@ export async function setSettings(partial) {
   return next;
 }
 
-export const DEFAULT_WIDGET_ORDER = ["calendar", "tasks", "notes"];
+export const DEFAULT_WIDGET_ORDER = ["calendar", "tasks", "notes", "topSites"];
 
 /** Returns { enabled, order }. Filters out removed widgets,
  *  appends any new ones that weren't in the saved order. */

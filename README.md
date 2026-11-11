@@ -8,6 +8,7 @@ A Chrome new tab page with calendar, tasks, and notes — styled with [Nord](htt
 
 - **Calendar** — shows events from your Nextcloud calendars in a month view
 - **Tasks** — add, check off, delete, and reorder (stored locally)
+- **Most visited** — shortcut tiles for your most visited sites (from Chrome's history)
 - **Notes** — a simple scratchpad that autosaves (stored locally)
 - Dark/light theme toggle
 

@@ -96,6 +96,10 @@ body.newtab {
   grid-row: span 2;
 }
 
+.card.is-wide {
+  grid-column: span 2;
+}
+
 .card {
   background: var(--bg-elevated);
   border-radius: var(--radius);
@@ -386,6 +390,93 @@ body.newtab {
   font-size: var(--fs-xs);
   color: var(--text-dim);
   height: 14px;
+}
+
+/* ---------- Most visited ---------- */
+
+.top-sites-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.top-site {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.top-site:hover {
+  border-color: var(--accent);
+}
+
+.top-site-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Letter fallback only appears when the favicon fails to load; otherwise its
+   background would show through transparent parts of the favicon. */
+.top-site-letter {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.top-site-icon:has(img.is-broken) .top-site-letter {
+  display: flex;
+  background: var(--bg-nested);
+}
+
+.top-site-icon img {
+  position: absolute;
+  inset: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+}
+
+.top-site-icon img.is-broken {
+  display: none;
+}
+
+.top-site-title {
+  max-width: 100%;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-sites-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  text-align: center;
+  margin: 0;
 }
 
 /* ---------- Tasks ---------- */
