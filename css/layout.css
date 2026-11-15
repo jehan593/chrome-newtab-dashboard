@@ -376,7 +376,8 @@ body.newtab {
   resize: none;
   border: none;
   background: transparent;
-  padding: 0;
+  padding: 0 2px;
+  caret-color: var(--accent);
   font-size: var(--fs-sm);
   line-height: 1.5;
 }
