@@ -1,4 +1,4 @@
-const TILE_COUNT = 8;
+const TILE_COUNT = 10;
 
 function escapeHTML(str) {
   const div = document.createElement("div");
@@ -24,7 +24,7 @@ function tileHTML(site) {
   } catch {}
   const label = site.title || host;
   return `
-    <a class="top-site" href="${escapeHTML(site.url)}" title="${escapeHTML(label)}">
+    <a class="top-site" href="${escapeHTML(site.url)}" title="${escapeHTML(label)}&#10;${escapeHTML(site.url)}">
       <span class="top-site-icon">
         <span class="top-site-letter" aria-hidden="true">${escapeHTML(label.charAt(0).toUpperCase())}</span>
         <img src="${faviconURL(site.url)}" alt="" />
