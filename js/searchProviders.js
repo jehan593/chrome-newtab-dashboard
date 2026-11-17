@@ -3,18 +3,21 @@ export const SEARCH_PROVIDERS = {
     label: "Google",
     icon: "icons/providers/google.ico",
     url: "https://www.google.com/search?q=",
+    aiUrl: "https://www.google.com/search?udm=50&q=",
     suggestUrl: "https://suggestqueries.google.com/complete/search?client=firefox&q=",
   },
   brave: {
     label: "Brave",
     icon: "icons/providers/brave.ico",
     url: "https://search.brave.com/search?q=",
+    aiUrl: "https://search.brave.com/ask?q=",
     suggestUrl: "https://search.brave.com/api/suggest?q=",
   },
   duckduckgo: {
     label: "DuckDuckGo",
     icon: "icons/providers/duckduckgo.ico",
     url: "https://duckduckgo.com/?q=",
+    aiUrl: "https://duckduckgo.com/?ia=chat&q=",
     suggestUrl: "https://duckduckgo.com/ac/?type=list&q=",
   },
   startpage: {

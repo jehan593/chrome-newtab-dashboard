@@ -1,6 +1,6 @@
 // chrome.storage.local wrapper.
 
-import { DEFAULT_SEARCH_PROVIDER } from "./searchProviders.js";
+import { DEFAULT_SEARCH_PROVIDER, SEARCH_PROVIDERS } from "./searchProviders.js";
 
 // Cache TTL — background alarm refreshes every 60 min, so 90 min gives
 // breathing room without racing the alarm.
@@ -58,7 +58,7 @@ export async function setWidgetConfig(partial) {
 
 export async function getSearchProvider() {
   const { searchProvider } = await get("searchProvider");
-  return searchProvider || DEFAULT_SEARCH_PROVIDER;
+  return SEARCH_PROVIDERS[searchProvider] ? searchProvider : DEFAULT_SEARCH_PROVIDER;
 }
 
 export async function setSearchProvider(id) {

@@ -6,6 +6,7 @@ const MAX_SUGGESTIONS = 5;
 
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 const SEARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`;
+const ASK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17v4M17 19h4"/></svg>`;
 
 function shellHTML() {
   const providerItems = Object.entries(SEARCH_PROVIDERS)
@@ -26,6 +27,7 @@ function shellHTML() {
         <button type="button" class="search-clear" aria-label="Clear search" title="Clear" hidden>${CLEAR_ICON}</button>
         <ul class="search-suggestions" id="search-suggestions" role="listbox" hidden></ul>
       </div>
+      <button type="button" class="mini-icon-btn search-ask-btn" aria-label="Ask AI" title="Ask AI">${ASK_ICON}</button>
       <button type="submit" class="mini-icon-btn" aria-label="Search" title="Search">${SEARCH_ICON}</button>
     </form>
   `;
@@ -54,6 +56,7 @@ export async function initSearch(root) {
   const providerMenu = root.querySelector(".search-provider-menu");
   const list = root.querySelector(".search-suggestions");
   const clearBtn = root.querySelector(".search-clear");
+  const askBtn = root.querySelector(".search-ask-btn");
 
   let providerId = await storage.getSearchProvider();
   const settings = await storage.getSettings();
@@ -68,6 +71,9 @@ export async function initSearch(root) {
     providerId = id;
     providerBtn.querySelector("img").src = SEARCH_PROVIDERS[id].icon;
     input.placeholder = `Search ${SEARCH_PROVIDERS[id].label}…`;
+    const hasAI = Boolean(SEARCH_PROVIDERS[id].aiUrl);
+    askBtn.disabled = !hasAI;
+    askBtn.title = hasAI ? `Ask ${SEARCH_PROVIDERS[id].label} AI` : `${SEARCH_PROVIDERS[id].label} has no AI mode`;
     providerMenu.querySelectorAll(".search-provider-option").forEach((btn) => {
       btn.setAttribute("aria-selected", String(btn.dataset.provider === id));
     });
@@ -81,6 +87,10 @@ export async function initSearch(root) {
   function goToSearch(query) {
     const provider = SEARCH_PROVIDERS[providerId];
     location.assign(`${provider.url}${encodeURIComponent(query)}`);
+  }
+
+  function goToAI(query) {
+    location.assign(`${SEARCH_PROVIDERS[providerId].aiUrl}${encodeURIComponent(query)}`);
   }
 
   function setActive(index) {
@@ -155,6 +165,14 @@ export async function initSearch(root) {
   });
 
   input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const query = (activeIndex >= 0 && !list.hidden ? items[activeIndex] : input.value).trim();
+      if (!query || !SEARCH_PROVIDERS[providerId].aiUrl) return;
+      hideSuggestions();
+      goToAI(query);
+      return;
+    }
     if (list.hidden) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -193,5 +211,12 @@ export async function initSearch(root) {
     if (!query) return;
     hideSuggestions();
     goToSearch(query);
+  });
+
+  askBtn.addEventListener("click", () => {
+    const query = input.value.trim();
+    if (!query || !SEARCH_PROVIDERS[providerId].aiUrl) return;
+    hideSuggestions();
+    goToAI(query);
   });
 }
