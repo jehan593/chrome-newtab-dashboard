@@ -403,6 +403,18 @@ body.newtab {
   padding: 8px 12px;
 }
 
+.page-header,
+.grid {
+  transition: filter 0.2s ease;
+}
+
+.page:has(.search-input:focus) .page-header,
+.page:has(.search-input:focus) .grid,
+.page:has(.search-provider:focus-within) .page-header,
+.page:has(.search-provider:focus-within) .grid {
+  filter: blur(6px);
+}
+
 .search-form {
   flex: 1;
   display: flex;
