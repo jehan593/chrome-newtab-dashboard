@@ -10,10 +10,11 @@ const ASK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 
 function shellHTML() {
   const providerItems = Object.entries(SEARCH_PROVIDERS)
-    .map(
-      ([id, p]) =>
-        `<li role="none"><button type="button" role="option" class="search-provider-option" data-provider="${id}" aria-label="${p.label}" title="${p.label}"><img src="${p.icon}" alt="" /></button></li>`
-    )
+    .map(([id, p], i, all) => {
+      const separator =
+        !p.url && all[i - 1]?.[1].url ? `<li role="separator" class="search-provider-separator" aria-hidden="true"></li>` : "";
+      return `${separator}<li role="none"><button type="button" role="option" class="search-provider-option" data-provider="${id}" aria-label="${p.label}" title="${p.label}"><img src="${p.icon}" alt="" /></button></li>`;
+    })
     .join("");
   return `
     <h2 class="sr-only">Search</h2>

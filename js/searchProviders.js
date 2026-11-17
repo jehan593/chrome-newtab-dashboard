@@ -6,6 +6,18 @@ export const SEARCH_PROVIDERS = {
     aiUrl: "https://www.google.com/search?udm=50&q=",
     suggestUrl: "https://suggestqueries.google.com/complete/search?client=firefox&q=",
   },
+  youtube: {
+    label: "YouTube",
+    icon: "icons/providers/youtube.svg",
+    url: "https://www.youtube.com/results?search_query=",
+    suggestUrl: "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=",
+  },
+  startpage: {
+    label: "Startpage",
+    icon: "icons/providers/startpage.ico",
+    url: "https://www.startpage.com/do/search?q=",
+    suggestUrl: "https://www.startpage.com/osuggestions?q=",
+  },
   brave: {
     label: "Brave",
     icon: "icons/providers/brave.ico",
@@ -19,12 +31,6 @@ export const SEARCH_PROVIDERS = {
     url: "https://duckduckgo.com/?q=",
     aiUrl: "https://duckduckgo.com/?ia=chat&q=",
     suggestUrl: "https://duckduckgo.com/ac/?type=list&q=",
-  },
-  startpage: {
-    label: "Startpage",
-    icon: "icons/providers/startpage.ico",
-    url: "https://www.startpage.com/do/search?q=",
-    suggestUrl: "https://www.startpage.com/osuggestions?q=",
   },
   claude: {
     label: "Claude",

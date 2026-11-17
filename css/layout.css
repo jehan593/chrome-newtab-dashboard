@@ -506,6 +506,12 @@ body.newtab {
   border-radius: var(--radius-sm);
 }
 
+.search-provider-separator {
+  width: 1px;
+  margin: 2px 2px;
+  background: var(--border);
+}
+
 .search-provider-menu[hidden] {
   display: none;
 }
