@@ -515,7 +515,7 @@ body.newtab {
   appearance: none;
 }
 
-.search-ask-btn:disabled {
+.search-form .mini-icon-btn:disabled {
   opacity: 0.35;
   cursor: default;
 }

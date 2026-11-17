@@ -57,6 +57,7 @@ export async function initSearch(root) {
   const list = root.querySelector(".search-suggestions");
   const clearBtn = root.querySelector(".search-clear");
   const askBtn = root.querySelector(".search-ask-btn");
+  const searchBtn = root.querySelector('button[type="submit"]');
 
   let providerId = await storage.getSearchProvider();
   const settings = await storage.getSettings();
@@ -70,8 +71,11 @@ export async function initSearch(root) {
   function showProvider(id) {
     providerId = id;
     providerBtn.querySelector("img").src = SEARCH_PROVIDERS[id].icon;
-    input.placeholder = `Search ${SEARCH_PROVIDERS[id].label}…`;
+    input.placeholder = SEARCH_PROVIDERS[id].url
+      ? `Search ${SEARCH_PROVIDERS[id].label}…`
+      : `Ask ${SEARCH_PROVIDERS[id].label}…`;
     const hasAI = Boolean(SEARCH_PROVIDERS[id].aiUrl);
+    searchBtn.disabled = !SEARCH_PROVIDERS[id].url;
     askBtn.disabled = !hasAI;
     askBtn.title = hasAI ? `Ask ${SEARCH_PROVIDERS[id].label} AI` : `${SEARCH_PROVIDERS[id].label} has no AI mode`;
     providerMenu.querySelectorAll(".search-provider-option").forEach((btn) => {
@@ -86,11 +90,16 @@ export async function initSearch(root) {
 
   function goToSearch(query) {
     const provider = SEARCH_PROVIDERS[providerId];
-    location.assign(`${provider.url}${encodeURIComponent(query)}`);
+    const base = provider.url || provider.aiUrl;
+    if (!base) return;
+    location.assign(`${base}${encodeURIComponent(query)}`);
   }
 
   function goToAI(query) {
-    location.assign(`${SEARCH_PROVIDERS[providerId].aiUrl}${encodeURIComponent(query)}`);
+    const provider = SEARCH_PROVIDERS[providerId];
+    const base = provider.aiUrl || provider.url;
+    if (!base) return;
+    location.assign(`${base}${encodeURIComponent(query)}`);
   }
 
   function setActive(index) {
@@ -149,7 +158,7 @@ export async function initSearch(root) {
     const query = input.value.trim();
     clearTimeout(debounceTimer);
     if (controller) controller.abort();
-    if (!query || !suggestionsEnabled) {
+    if (!query || !suggestionsEnabled || !SEARCH_PROVIDERS[providerId].suggestUrl) {
       hideSuggestions();
       return;
     }
@@ -168,8 +177,15 @@ export async function initSearch(root) {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       const query = (activeIndex >= 0 && !list.hidden ? items[activeIndex] : input.value).trim();
-      if (!query || !SEARCH_PROVIDERS[providerId].aiUrl) return;
+      if (!query) return;
       hideSuggestions();
+      goToAI(query);
+      return;
+    }
+    if (e.key === "Enter" && !SEARCH_PROVIDERS[providerId].url) {
+      e.preventDefault();
+      const query = input.value.trim();
+      if (!query) return;
       goToAI(query);
       return;
     }
@@ -215,7 +231,7 @@ export async function initSearch(root) {
 
   askBtn.addEventListener("click", () => {
     const query = input.value.trim();
-    if (!query || !SEARCH_PROVIDERS[providerId].aiUrl) return;
+    if (!query) return;
     hideSuggestions();
     goToAI(query);
   });

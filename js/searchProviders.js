@@ -26,6 +26,27 @@ export const SEARCH_PROVIDERS = {
     url: "https://www.startpage.com/do/search?q=",
     suggestUrl: "https://www.startpage.com/osuggestions?q=",
   },
+  claude: {
+    label: "Claude",
+    icon: "icons/providers/claude.svg",
+    url: null,
+    aiUrl: "https://claude.ai/new?q=",
+    suggestUrl: null,
+  },
+  chatgpt: {
+    label: "ChatGPT",
+    icon: "icons/providers/chatgpt.svg",
+    url: null,
+    aiUrl: "https://chatgpt.com/?q=",
+    suggestUrl: null,
+  },
+  perplexity: {
+    label: "Perplexity",
+    icon: "icons/providers/perplexity.svg",
+    url: null,
+    aiUrl: "https://www.perplexity.ai/search?q=",
+    suggestUrl: null,
+  },
 };
 
 export const DEFAULT_SEARCH_PROVIDER = "google";
