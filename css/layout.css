@@ -498,6 +498,44 @@ body.newtab {
   display: none;
 }
 
+.search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-clear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 2px;
+  cursor: pointer;
+}
+
+.search-clear[hidden] {
+  display: none;
+}
+
+.search-clear svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.search-clear:hover {
+  color: var(--text);
+}
+
+.search-input {
+  padding-right: 30px;
+}
+
 .search-input:focus-visible {
   outline: none;
   border-color: var(--accent);

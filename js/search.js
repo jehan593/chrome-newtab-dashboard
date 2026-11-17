@@ -4,6 +4,7 @@ import { SEARCH_PROVIDERS } from "./searchProviders.js";
 const SUGGEST_DELAY_MS = 150;
 const MAX_SUGGESTIONS = 5;
 
+const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 const SEARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`;
 
 function shellHTML() {
@@ -22,6 +23,7 @@ function shellHTML() {
       </div>
       <div class="search-field">
         <input type="search" class="search-input" name="q" placeholder="Search the web…" autocomplete="off" spellcheck="false" aria-label="Search the web" aria-autocomplete="list" aria-expanded="false" aria-controls="search-suggestions" />
+        <button type="button" class="search-clear" aria-label="Clear search" title="Clear" hidden>${CLEAR_ICON}</button>
         <ul class="search-suggestions" id="search-suggestions" role="listbox" hidden></ul>
       </div>
       <button type="submit" class="mini-icon-btn" aria-label="Search" title="Search">${SEARCH_ICON}</button>
@@ -51,6 +53,7 @@ export async function initSearch(root) {
   const providerBtn = root.querySelector(".search-provider-btn");
   const providerMenu = root.querySelector(".search-provider-menu");
   const list = root.querySelector(".search-suggestions");
+  const clearBtn = root.querySelector(".search-clear");
 
   let providerId = await storage.getSearchProvider();
   const settings = await storage.getSettings();
@@ -125,7 +128,14 @@ export async function initSearch(root) {
     if (!providerEl.contains(e.target)) closeProviderMenu();
   });
 
+  clearBtn.addEventListener("click", () => {
+    input.value = "";
+    input.dispatchEvent(new Event("input"));
+    input.focus();
+  });
+
   input.addEventListener("input", () => {
+    clearBtn.hidden = !input.value;
     const query = input.value.trim();
     clearTimeout(debounceTimer);
     if (controller) controller.abort();
@@ -152,6 +162,10 @@ export async function initSearch(root) {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive(activeIndex <= 0 ? items.length - 1 : activeIndex - 1);
+    } else if (e.key === "ArrowRight" && activeIndex >= 0) {
+      e.preventDefault();
+      input.value = items[activeIndex];
+      input.dispatchEvent(new Event("input"));
     } else if (e.key === "Escape") {
       hideSuggestions();
     } else if (e.key === "Enter" && activeIndex >= 0) {
