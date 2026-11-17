@@ -1,0 +1,183 @@
+import * as storage from "./storage.js";
+import { SEARCH_PROVIDERS } from "./searchProviders.js";
+
+const SUGGEST_DELAY_MS = 150;
+const MAX_SUGGESTIONS = 5;
+
+const SEARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`;
+
+function shellHTML() {
+  const providerItems = Object.entries(SEARCH_PROVIDERS)
+    .map(
+      ([id, p]) =>
+        `<li role="none"><button type="button" role="option" class="search-provider-option" data-provider="${id}" aria-label="${p.label}" title="${p.label}"><img src="${p.icon}" alt="" /></button></li>`
+    )
+    .join("");
+  return `
+    <h2 class="sr-only">Search</h2>
+    <form class="search-form" role="search">
+      <div class="search-provider">
+        <button type="button" class="search-provider-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Search provider" title="Search provider"><img alt="" /></button>
+        <ul class="search-provider-menu" role="listbox" aria-label="Search provider" hidden>${providerItems}</ul>
+      </div>
+      <div class="search-field">
+        <input type="search" class="search-input" name="q" placeholder="Search the web…" autocomplete="off" spellcheck="false" aria-label="Search the web" aria-autocomplete="list" aria-expanded="false" aria-controls="search-suggestions" />
+        <ul class="search-suggestions" id="search-suggestions" role="listbox" hidden></ul>
+      </div>
+      <button type="submit" class="mini-icon-btn" aria-label="Search" title="Search">${SEARCH_ICON}</button>
+    </form>
+  `;
+}
+
+function escapeHTML(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+async function fetchSuggestions(providerId, query, signal) {
+  const url = `${SEARCH_PROVIDERS[providerId].suggestUrl}${encodeURIComponent(query)}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) return [];
+  const [, list] = await res.json();
+  return Array.isArray(list) ? list.slice(0, MAX_SUGGESTIONS) : [];
+}
+
+export async function initSearch(root) {
+  root.innerHTML = shellHTML();
+  const form = root.querySelector(".search-form");
+  const input = root.querySelector(".search-input");
+  const providerEl = root.querySelector(".search-provider");
+  const providerBtn = root.querySelector(".search-provider-btn");
+  const providerMenu = root.querySelector(".search-provider-menu");
+  const list = root.querySelector(".search-suggestions");
+
+  let providerId = await storage.getSearchProvider();
+  const settings = await storage.getSettings();
+  const suggestionsEnabled = settings.showSearchSuggestions !== false;
+
+  let items = [];
+  let activeIndex = -1;
+  let debounceTimer = null;
+  let controller = null;
+
+  function showProvider(id) {
+    providerId = id;
+    providerBtn.querySelector("img").src = SEARCH_PROVIDERS[id].icon;
+    input.placeholder = `Search ${SEARCH_PROVIDERS[id].label}…`;
+    providerMenu.querySelectorAll(".search-provider-option").forEach((btn) => {
+      btn.setAttribute("aria-selected", String(btn.dataset.provider === id));
+    });
+  }
+
+  function closeProviderMenu() {
+    providerMenu.hidden = true;
+    providerBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function goToSearch(query) {
+    const provider = SEARCH_PROVIDERS[providerId];
+    location.assign(`${provider.url}${encodeURIComponent(query)}`);
+  }
+
+  function setActive(index) {
+    activeIndex = index;
+    [...list.children].forEach((li, i) => li.classList.toggle("is-active", i === index));
+    input.setAttribute("aria-activedescendant", index >= 0 ? list.children[index].id : "");
+  }
+
+  function hideSuggestions() {
+    items = [];
+    setActive(-1);
+    list.hidden = true;
+    list.innerHTML = "";
+    input.setAttribute("aria-expanded", "false");
+  }
+
+  function renderSuggestions(suggestions) {
+    items = suggestions;
+    list.innerHTML = suggestions
+      .map((text, i) => `<li role="option" id="search-suggestion-${i}" class="search-suggestion" aria-selected="false">${escapeHTML(text)}</li>`)
+      .join("");
+    list.hidden = suggestions.length === 0;
+    input.setAttribute("aria-expanded", String(suggestions.length > 0));
+    setActive(-1);
+  }
+
+  showProvider(providerId);
+
+  providerBtn.addEventListener("click", () => {
+    const open = providerMenu.hidden;
+    providerMenu.hidden = !open;
+    providerBtn.setAttribute("aria-expanded", String(open));
+  });
+
+  providerMenu.addEventListener("click", (e) => {
+    const btn = e.target.closest(".search-provider-option");
+    if (!btn) return;
+    showProvider(btn.dataset.provider);
+    closeProviderMenu();
+    hideSuggestions();
+    storage.setSearchProvider(providerId);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!providerEl.contains(e.target)) closeProviderMenu();
+  });
+
+  input.addEventListener("input", () => {
+    const query = input.value.trim();
+    clearTimeout(debounceTimer);
+    if (controller) controller.abort();
+    if (!query || !suggestionsEnabled) {
+      hideSuggestions();
+      return;
+    }
+    debounceTimer = setTimeout(async () => {
+      controller = new AbortController();
+      try {
+        const suggestions = await fetchSuggestions(providerId, query, controller.signal);
+        if (input.value.trim() === query) renderSuggestions(suggestions);
+      } catch (err) {
+        if (err.name !== "AbortError") hideSuggestions();
+      }
+    }, SUGGEST_DELAY_MS);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (list.hidden) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((activeIndex + 1) % items.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive(activeIndex <= 0 ? items.length - 1 : activeIndex - 1);
+    } else if (e.key === "Escape") {
+      hideSuggestions();
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      e.preventDefault();
+      input.value = items[activeIndex];
+      hideSuggestions();
+      goToSearch(input.value);
+    }
+  });
+
+  list.addEventListener("mousedown", (e) => {
+    const li = e.target.closest(".search-suggestion");
+    if (!li) return;
+    e.preventDefault();
+    const text = items[[...list.children].indexOf(li)];
+    hideSuggestions();
+    goToSearch(text);
+  });
+
+  input.addEventListener("blur", hideSuggestions);
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const query = input.value.trim();
+    if (!query) return;
+    hideSuggestions();
+    goToSearch(query);
+  });
+}

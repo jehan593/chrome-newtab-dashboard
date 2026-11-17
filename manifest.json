@@ -12,6 +12,12 @@
     "type": "module"
   },
   "permissions": ["storage", "alarms", "topSites", "favicon"],
+  "host_permissions": [
+    "https://suggestqueries.google.com/*",
+    "https://duckduckgo.com/*",
+    "https://search.brave.com/*",
+    "https://www.startpage.com/*"
+  ],
   "optional_host_permissions": ["*://*/*"],
   "icons": {
     "16": "icons/icon16.png",

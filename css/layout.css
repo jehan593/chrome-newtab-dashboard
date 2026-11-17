@@ -393,6 +393,144 @@ body.newtab {
   height: 14px;
 }
 
+/* ---------- Search ---------- */
+
+.search-bar {
+  max-width: 800px;
+  margin: 0 auto 36px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+.search-form {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.search-form .search-provider-btn,
+.search-form .search-input,
+.search-form > .mini-icon-btn {
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.search-form .search-provider-btn,
+.search-form > .mini-icon-btn {
+  width: 36px;
+  padding: 0;
+}
+
+.search-form > .mini-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.search-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  padding: 0 14px;
+  font-size: var(--fs-md);
+}
+
+.search-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-provider {
+  position: relative;
+  flex: none;
+}
+
+.search-provider-btn,
+.search-provider-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 6px;
+}
+
+.search-provider-btn {
+  border-color: var(--border);
+}
+
+.search-provider-btn:hover,
+.search-provider-option:hover,
+.search-provider-option[aria-selected="true"] {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+.search-provider-btn img,
+.search-provider-option img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.search-provider-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  display: flex;
+  gap: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.search-provider-menu[hidden] {
+  display: none;
+}
+
+.search-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.search-suggestion {
+  padding: 4px 8px;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-suggestion.is-active,
+.search-suggestion:hover {
+  background: var(--border);
+}
+
 /* ---------- Most visited ---------- */
 
 .top-sites-grid {

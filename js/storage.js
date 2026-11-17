@@ -1,5 +1,7 @@
 // chrome.storage.local wrapper.
 
+import { DEFAULT_SEARCH_PROVIDER } from "./searchProviders.js";
+
 // Cache TTL — background alarm refreshes every 60 min, so 90 min gives
 // breathing room without racing the alarm.
 const EVENT_CACHE_TTL_MS = 90 * 60 * 1000;
@@ -18,6 +20,8 @@ export async function getSettings() {
     settings || {
       nextcloud: null,
       theme: null,
+      showSearchBar: true,
+      showSearchSuggestions: true,
       weekStart: 1, // Monday
     }
   );
@@ -50,6 +54,15 @@ export async function setWidgetConfig(partial) {
   const next = { ...current, ...partial };
   await set({ widgets: next });
   return next;
+}
+
+export async function getSearchProvider() {
+  const { searchProvider } = await get("searchProvider");
+  return searchProvider || DEFAULT_SEARCH_PROVIDER;
+}
+
+export async function setSearchProvider(id) {
+  await set({ searchProvider: id });
 }
 
 export async function getNotes() {

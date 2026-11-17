@@ -327,3 +327,30 @@ widgetToggleListEl.addEventListener("drop", async (e) => {
 });
 
 loadWidgetToggles();
+
+const searchBarToggleEl = document.getElementById("search-bar-toggle");
+
+async function loadSearchBarToggle() {
+  const settings = await storage.getSettings();
+  searchBarToggleEl.checked = settings.showSearchBar !== false;
+}
+
+searchBarToggleEl.addEventListener("change", () => {
+  storage.setSettings({ showSearchBar: searchBarToggleEl.checked });
+});
+
+loadSearchBarToggle();
+
+const searchSuggestionsToggleEl = document.getElementById("search-suggestions-toggle");
+
+async function loadSearchSuggestionsToggle() {
+  const settings = await storage.getSettings();
+  searchSuggestionsToggleEl.checked = settings.showSearchSuggestions !== false;
+}
+
+searchSuggestionsToggleEl.addEventListener("change", () => {
+  storage.setSettings({ showSearchSuggestions: searchSuggestionsToggleEl.checked });
+});
+
+loadSearchSuggestionsToggle();
+

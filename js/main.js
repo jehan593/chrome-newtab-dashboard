@@ -1,5 +1,6 @@
 import { initCalendar } from "./calendar.js";
 import { initNotes } from "./notes.js";
+import { initSearch } from "./search.js";
 import { initTasks } from "./tasks.js";
 import { initTopSites } from "./topSites.js";
 import * as storage from "./storage.js";
@@ -34,6 +35,13 @@ async function init() {
   try {
     const settings = await storage.getSettings();
     applyTheme(settings.theme);
+
+    const searchBarEl = document.getElementById("search-bar");
+    if (settings.showSearchBar === false) {
+      searchBarEl.hidden = true;
+    } else {
+      initSearch(searchBarEl);
+    }
 
     document.querySelector(".theme-toggle").addEventListener("click", async () => {
       const next = currentEffectiveTheme() === "dark" ? "light" : "dark";
