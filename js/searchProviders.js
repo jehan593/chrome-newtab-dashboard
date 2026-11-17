@@ -32,6 +32,12 @@ export const SEARCH_PROVIDERS = {
     aiUrl: "https://duckduckgo.com/?ia=chat&q=",
     suggestUrl: "https://duckduckgo.com/ac/?type=list&q=",
   },
+  github: {
+    label: "GitHub",
+    icon: "icons/providers/github.svg",
+    url: "https://github.com/search?q=",
+    suggestUrl: null,
+  },
   claude: {
     label: "Claude",
     icon: "icons/providers/claude.svg",
