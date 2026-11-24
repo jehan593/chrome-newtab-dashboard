@@ -256,6 +256,7 @@ const WIDGET_LABELS = {
   tasks: "Tasks",
   notes: "Notes",
   topSites: "Most visited",
+  recents: "Recents",
 };
 
 const widgetToggleListEl = document.getElementById("widget-toggle-list");
