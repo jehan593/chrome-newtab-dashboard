@@ -61,7 +61,7 @@ export async function initRecents(root) {
           <img src="${faviconURL(page.url)}" alt="" />
         </span>
         <div class="recents-detail">
-          <a class="recents-text" href="${escapeHTML(page.url)}" target="_blank" rel="noreferrer" title="${escapeHTML(page.url)}">${escapeHTML(page.title || hostFromURL(page.url))}</a>
+          <a class="recents-text" href="${escapeHTML(page.url)}" title="${escapeHTML(page.url)}">${escapeHTML(page.title || hostFromURL(page.url))}</a>
           <span class="recents-action">${escapeHTML(hostFromURL(page.url))}</span>
         </div>
         <time class="recents-time" datetime="${new Date(page.lastVisitTime).toISOString()}">${relativeTime(page.lastVisitTime)}</time>
