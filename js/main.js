@@ -1,6 +1,7 @@
 import { initCalendar } from "./calendar.js";
 import { initNotes } from "./notes.js";
-import { initRecents } from "./recents.js";
+import { initBookmarks } from "./bookmarks.js";
+import { initHistory } from "./history.js";
 import { initSearch } from "./search.js";
 import { initTasks } from "./tasks.js";
 import { initTopSites } from "./topSites.js";
@@ -11,7 +12,8 @@ const WIDGETS = {
   tasks: { elementId: "tasks-widget", init: initTasks },
   notes: { elementId: "notes-widget", init: initNotes },
   topSites: { elementId: "top-sites-widget", init: initTopSites },
-  recents: { elementId: "recents-widget", init: initRecents },
+  history: { elementId: "history-widget", init: initHistory },
+  bookmarks: { elementId: "bookmarks-widget", init: initBookmarks },
 };
 
 function applyTheme(theme) {

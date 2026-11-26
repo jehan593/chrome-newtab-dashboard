@@ -34,14 +34,22 @@ export async function setSettings(partial) {
   return next;
 }
 
-export const DEFAULT_WIDGET_ORDER = ["calendar", "topSites", "tasks", "notes", "recents"];
+export const DEFAULT_WIDGET_ORDER = ["calendar", "topSites", "tasks", "notes", "history", "bookmarks"];
 
 /** Returns { enabled, order }. Filters out removed widgets,
  *  appends any new ones that weren't in the saved order. */
 export async function getWidgetConfig() {
   const { widgets } = await get("widgets");
-  const enabled = { ...Object.fromEntries(DEFAULT_WIDGET_ORDER.map((id) => [id, true])), ...(widgets && widgets.enabled) };
-  const savedOrder = (widgets && widgets.order) || [];
+
+  // The widget used to be called "recents"; keep saved settings working.
+  const savedEnabled = { ...(widgets && widgets.enabled) };
+  if ("recents" in savedEnabled) {
+    savedEnabled.history = savedEnabled.recents;
+    delete savedEnabled.recents;
+  }
+  const enabled = { ...Object.fromEntries(DEFAULT_WIDGET_ORDER.map((id) => [id, true])), ...savedEnabled };
+
+  const savedOrder = ((widgets && widgets.order) || []).map((id) => (id === "recents" ? "history" : id));
   const order = [
     ...savedOrder.filter((id) => DEFAULT_WIDGET_ORDER.includes(id)),
     ...DEFAULT_WIDGET_ORDER.filter((id) => !savedOrder.includes(id)),
@@ -65,7 +73,7 @@ export async function setSearchProvider(id) {
   await set({ searchProvider: id });
 }
 
-/** URLs the user removed from Most visited or Recents. */
+/** URLs the user removed from Most visited or History. */
 export async function getDismissedLinks() {
   const { dismissedLinks } = await get("dismissedLinks");
   return Array.isArray(dismissedLinks) ? dismissedLinks : [];

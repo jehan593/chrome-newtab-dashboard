@@ -1,7 +1,5 @@
 import * as storage from "./storage.js";
 
-const HISTORY_LIMIT = 20;
-const HISTORY_DAYS = 7;
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 
 function escapeHTML(str) {
@@ -26,7 +24,7 @@ function highlightHTML(str, query) {
       break;
     }
     html += escapeHTML(text.slice(from, at));
-    html += `<mark class="recents-match">${escapeHTML(text.slice(at, at + query.length))}</mark>`;
+    html += `<mark class="links-match">${escapeHTML(text.slice(at, at + query.length))}</mark>`;
     from = at + query.length;
   }
 
@@ -59,14 +57,14 @@ function relativeTime(timestamp) {
 
 function shellHTML() {
   return `
-    <div class="recents-header">
-      <h2>Recents</h2>
-      <div class="recents-search-field">
-        <input class="recents-search" type="search" placeholder="Search recents" aria-label="Search recent links" autocomplete="off" />
-        <button type="button" class="search-clear recents-clear" aria-label="Clear recents search" title="Clear" hidden>${CLEAR_ICON}</button>
+    <div class="links-header">
+      <h2>History</h2>
+      <div class="links-search-field">
+        <input class="links-search" type="search" placeholder="Search history" aria-label="Search browsing history" autocomplete="off" />
+        <button type="button" class="search-clear links-clear" aria-label="Clear history search" title="Clear" hidden>${CLEAR_ICON}</button>
       </div>
     </div>
-    <ul class="recents-list"></ul>
+    <ul class="links-list"></ul>
   `;
 }
 
@@ -74,33 +72,30 @@ function itemHTML(page, query) {
   const host = hostFromURL(page.url);
   const label = page.title || host;
   return `
-    <li class="recents-row" data-url="${escapeHTML(page.url)}">
-      <a class="recents-item" href="${escapeHTML(page.url)}" title="${escapeHTML(page.url)}">
-        <span class="recents-icon">
+    <li class="links-row" data-url="${escapeHTML(page.url)}">
+      <a class="links-item" href="${escapeHTML(page.url)}" title="${escapeHTML(page.url)}">
+        <span class="links-icon">
           <img src="${faviconURL(page.url)}" alt="" />
         </span>
-        <div class="recents-detail">
-          <span class="recents-text">${highlightHTML(label, query)}</span>
-          <span class="recents-action">${highlightHTML(host, query)}</span>
+        <div class="links-detail">
+          <span class="links-text">${highlightHTML(label, query)}</span>
+          <span class="links-action">${highlightHTML(page.url, query)}</span>
         </div>
-        <time class="recents-time" datetime="${new Date(page.lastVisitTime).toISOString()}">${relativeTime(page.lastVisitTime)}</time>
+        <time class="links-time" datetime="${new Date(page.lastVisitTime).toISOString()}">${relativeTime(page.lastVisitTime)}</time>
       </a>
       <button type="button" class="card-close" aria-label="Remove ${escapeHTML(label)}" title="Remove">${CLEAR_ICON}</button>
     </li>`;
 }
 
-export async function initRecents(root) {
+export async function initHistory(root) {
   root.innerHTML = shellHTML();
-  const list = root.querySelector(".recents-list");
-  const search = root.querySelector(".recents-search");
-  const clearBtn = root.querySelector(".recents-clear");
+  const list = root.querySelector(".links-list");
+  const search = root.querySelector(".links-search");
+  const clearBtn = root.querySelector(".links-clear");
 
   const [history, dismissed] = await Promise.all([
-    chrome.history.search({
-      text: "",
-      startTime: Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000,
-      maxResults: HISTORY_LIMIT,
-    }),
+    // startTime 0 + maxResults 0 asks Chrome for the full history.
+    chrome.history.search({ text: "", startTime: 0, maxResults: 0 }),
     storage.getDismissedLinks(),
   ]);
   const dismissedSet = new Set(dismissed);
@@ -109,23 +104,23 @@ export async function initRecents(root) {
   function render(pages, query) {
     if (pages.length === 0) {
       list.innerHTML = query
-        ? '<li class="recents-empty">No matching links.</li>'
-        : '<li class="recents-empty">No recent browsing activity yet.</li>';
+        ? '<li class="links-empty">No matching links.</li>'
+        : '<li class="links-empty">No browsing history yet.</li>';
       return;
     }
 
     list.innerHTML = pages.map((page) => itemHTML(page, query)).join("");
 
-    for (const img of list.querySelectorAll(".recents-icon img")) {
+    for (const img of list.querySelectorAll(".links-icon img")) {
       img.addEventListener("error", () => img.classList.add("is-broken"));
     }
 
     for (const btn of list.querySelectorAll(".card-close")) {
       btn.addEventListener("click", async () => {
-        const row = btn.closest(".recents-row");
+        const row = btn.closest(".links-row");
         const url = row.dataset.url;
 
-        // Unlike Most visited, Recents dismissals are destructive: remove the
+        // Unlike Most visited, History dismissals are destructive: remove the
         // visit from Chrome's own history, not just from this widget.
         try {
           await chrome.history.deleteUrl({ url });

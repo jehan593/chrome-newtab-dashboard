@@ -11,7 +11,7 @@
     "service_worker": "js/background.js",
     "type": "module"
   },
-  "permissions": ["storage", "alarms", "topSites", "favicon", "history"],
+  "permissions": ["storage", "alarms", "topSites", "favicon", "history", "bookmarks"],
   "host_permissions": [
     "https://suggestqueries.google.com/*",
     "https://duckduckgo.com/*",

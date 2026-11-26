@@ -124,12 +124,12 @@ body.newtab {
   color: var(--text-muted);
 }
 
-/* Hover-only dismiss control shared by Recents cards and Most visited tiles.
+/* Hover-only dismiss control shared by History cards and Most visited tiles.
    visibility (not just opacity) keeps it from stealing clicks when hidden. */
 .card-close {
   position: absolute;
   /* Negative right offset pushes the badge past the card edge; the few px
-     left inside keep it clear of the Recents scrollport. */
+     left inside keep it clear of the History scrollport. */
   top: 0;
   right: -4px;
   width: 16px;
@@ -160,8 +160,8 @@ body.newtab {
 
 .top-site-wrap:hover .card-close,
 .top-site-wrap:focus-within .card-close,
-.recents-row:hover .card-close,
-.recents-row:focus-within .card-close {
+.links-row:hover .card-close,
+.links-row:focus-within .card-close {
   opacity: 1;
   visibility: visible;
 }
@@ -440,13 +440,14 @@ body.newtab {
   height: 14px;
 }
 
-/* ---------- Recents ---------- */
+/* ---------- History ---------- */
 
-#recents-widget h2 {
+#history-widget h2,
+#bookmarks-widget h2 {
   margin: 0;
 }
 
-.recents-header {
+.links-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -455,13 +456,13 @@ body.newtab {
   margin-bottom: 4px;
 }
 
-.recents-search-field {
+.links-search-field {
   position: relative;
   flex: 1;
   min-width: 0;
 }
 
-.recents-search {
+.links-search {
   width: 100%;
   box-sizing: border-box;
   height: 28px;
@@ -475,29 +476,29 @@ body.newtab {
 }
 
 /* The native cross has a tiny hit area; use our own button instead. */
-.recents-search::-webkit-search-cancel-button {
+.links-search::-webkit-search-cancel-button {
   -webkit-appearance: none;
   appearance: none;
 }
 
-.recents-search::placeholder {
+.links-search::placeholder {
   color: var(--text-dim);
 }
 
-.recents-search:focus-visible {
+.links-search:focus-visible {
   outline: none;
   border-color: var(--accent);
 }
 
-.recents-list {
+.links-list {
   margin: 0;
   /* Right room handles the badge's sideways overhang. */
   padding: 0 8px 0 0;
   list-style: none;
   display: grid;
-  /* Five rows exactly fill the visible area, so scrolling never leaves a
-     half-clipped card at the bottom. */
-  grid-auto-rows: calc((100% - 12px) / 5);
+  /* Fixed-height rows keep the cards compact and avoid recalculating track
+     sizes from the flexed card height. */
+  grid-auto-rows: 36px;
   align-content: start;
   gap: 3px;
   flex: 1;
@@ -506,24 +507,21 @@ body.newtab {
   /* Reserve the gutter even when few results are shown, keeping the cards'
      right edge aligned with the search box above. */
   scrollbar-gutter: stable;
-  /* Let overhanging badges paint past the scrollport so rows can snap flush
-     to the top edge without their close button being clipped. */
+  /* Let the overhanging close badges paint past the scrollport edge. */
   overflow-clip-margin: 6px;
-  scroll-snap-type: y mandatory;
 }
 
-.recents-row {
+.links-row {
   position: relative;
   min-width: 0;
-  scroll-snap-align: start;
 }
 
-.recents-item {
+.links-item {
   height: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 10px;
+  padding: 4px 10px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -531,71 +529,77 @@ body.newtab {
   text-decoration: none;
 }
 
-.recents-item:hover,
-.recents-item:focus-visible {
+.links-item:hover,
+.links-item:focus-visible {
   border-color: var(--accent);
 }
 
-.recents-item:focus-visible {
+.links-item:focus-visible {
   outline: none;
 }
 
-.recents-icon {
+.links-icon {
   flex: none;
   color: var(--text-dim);
 }
 
-.recents-icon svg,
-.recents-icon img {
+.links-icon svg,
+.links-icon img {
   width: 16px;
   height: 16px;
   display: block;
 }
 
-.recents-icon img.is-broken {
+.links-icon img.is-broken {
   visibility: hidden;
 }
 
-.recents-text {
+.links-text {
   color: inherit;
   text-decoration: none;
 }
 
-.recents-match {
+.links-match {
   background: var(--match);
   color: var(--match-text);
   border-radius: 2px;
   padding: 0 1px;
 }
 
-.recents-detail {
+.links-detail {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  gap: 4px;
+  /* Slightly tighter line boxes pay for the wider gap, so the card height
+     stays the same and the URL's top isn't crowded by the title. */
+  line-height: 1.02;
 }
 
-.recents-action {
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
+.links-action {
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.recents-text {
+.links-text {
   font-size: var(--fs-xs);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recents-time {
+.links-time {
   flex: none;
   font-size: var(--fs-xs);
   line-height: 1.1;
   color: var(--text-dim);
 }
 
-.recents-empty {
+.links-empty {
   color: var(--text-dim);
   font-size: var(--fs-sm);
   margin: auto;
