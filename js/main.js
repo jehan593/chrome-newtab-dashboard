@@ -74,11 +74,13 @@ async function init() {
       grid.appendChild(el);
       initPromises.push(id === "calendar" ? initCalendar(el, settings) : widget.init(el));
     }
+
+    // Wait for widgets to paint before revealing the page; otherwise the
+    // dashboard flashes in empty and each widget fills in afterward.
+    await Promise.allSettled(initPromises);
   } finally {
     document.querySelector(".page").classList.remove("is-loading");
   }
-
-  await Promise.all(initPromises);
 }
 
 document.addEventListener("DOMContentLoaded", init);

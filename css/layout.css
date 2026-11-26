@@ -8,7 +8,8 @@ body.newtab {
   margin: 0 auto;
 }
 
-/* Hide page until theme/order are applied from async storage. */
+/* Hide page until theme/order and widget data are ready, then show the whole
+   dashboard in one frame. A fade makes the new-tab-to-new-tab swap noticeable. */
 .page.is-loading {
   visibility: hidden;
 }

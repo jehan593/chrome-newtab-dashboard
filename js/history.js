@@ -1,5 +1,6 @@
 import * as storage from "./storage.js";
 
+const INITIAL_HISTORY_LIMIT = 50;
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 
 function escapeHTML(str) {
@@ -93,15 +94,18 @@ export async function initHistory(root) {
   const search = root.querySelector(".links-search");
   const clearBtn = root.querySelector(".links-clear");
 
-  const [history, dismissed] = await Promise.all([
-    // startTime 0 + maxResults 0 asks Chrome for the full history.
-    chrome.history.search({ text: "", startTime: 0, maxResults: 0 }),
+  // Paint the newest rows first; fetching the whole history stays off the
+  // critical path so the card isn't blank while Chrome scans it.
+  const [initialHistory, dismissed] = await Promise.all([
+    chrome.history.search({ text: "", startTime: 0, maxResults: INITIAL_HISTORY_LIMIT }),
     storage.getDismissedLinks(),
   ]);
   const dismissedSet = new Set(dismissed);
-  const results = history.filter((page) => !dismissedSet.has(page.url));
+  let results = initialHistory.filter((page) => !dismissedSet.has(page.url));
+  let currentQuery = "";
 
-  function render(pages, query) {
+  function render(pages, query, preserveScroll = false) {
+    const scrollTop = list.scrollTop;
     if (pages.length === 0) {
       list.innerHTML = query
         ? '<li class="links-empty">No matching links.</li>'
@@ -110,6 +114,7 @@ export async function initHistory(root) {
     }
 
     list.innerHTML = pages.map((page) => itemHTML(page, query)).join("");
+    if (preserveScroll) list.scrollTop = scrollTop;
 
     for (const img of list.querySelectorAll(".links-icon img")) {
       img.addEventListener("error", () => img.classList.add("is-broken"));
@@ -129,6 +134,7 @@ export async function initHistory(root) {
           await storage.addDismissedLink(url);
         }
 
+        dismissedSet.add(url);
         const index = results.findIndex((page) => page.url === url);
         if (index !== -1) results.splice(index, 1);
         row.remove();
@@ -136,10 +142,8 @@ export async function initHistory(root) {
     }
   }
 
-  search.addEventListener("input", () => {
-    clearBtn.hidden = search.value.length === 0;
-    const query = search.value.trim();
-    const lowerQuery = query.toLowerCase();
+  function renderCurrent(preserveScroll = false) {
+    const lowerQuery = currentQuery.toLowerCase();
     const matches = lowerQuery
       ? results.filter((page) =>
           `${page.title || ""} ${page.url} ${hostFromURL(page.url)}`
@@ -147,7 +151,13 @@ export async function initHistory(root) {
             .includes(lowerQuery)
         )
       : results;
-    render(matches, query);
+    render(matches, currentQuery, preserveScroll);
+  }
+
+  search.addEventListener("input", () => {
+    clearBtn.hidden = search.value.length === 0;
+    currentQuery = search.value.trim();
+    renderCurrent();
     list.scrollTop = 0;
   });
 
@@ -158,5 +168,16 @@ export async function initHistory(root) {
     search.focus();
   });
 
-  render(results, "");
+  renderCurrent();
+
+  // Keep the unlimited behavior: swap in the full history once it arrives.
+  chrome.history
+    .search({ text: "", startTime: 0, maxResults: 0 })
+    .then((fullHistory) => {
+      results = fullHistory.filter((page) => !dismissedSet.has(page.url));
+      renderCurrent(true);
+    })
+    .catch(() => {
+      // A failed full scan leaves the fast initial rows usable.
+    });
 }
