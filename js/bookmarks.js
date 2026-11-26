@@ -1,33 +1,6 @@
+import { escapeHTML, highlightTokens, scoreMatch, searchTokens } from "./linkSearch.js";
+
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
-
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function highlightHTML(str, query) {
-  const text = String(str ?? "");
-  if (!query) return escapeHTML(text);
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  let html = "";
-  let from = 0;
-
-  while (from < text.length) {
-    const at = lowerText.indexOf(lowerQuery, from);
-    if (at === -1) {
-      html += escapeHTML(text.slice(from));
-      break;
-    }
-    html += escapeHTML(text.slice(from, at));
-    html += `<mark class="links-match">${escapeHTML(text.slice(at, at + query.length))}</mark>`;
-    from = at + query.length;
-  }
-
-  return html;
-}
 
 function faviconURL(pageUrl) {
   return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=32`;
@@ -54,7 +27,7 @@ function shellHTML() {
   `;
 }
 
-function itemHTML(bookmark, query) {
+function itemHTML(bookmark, tokens, phrase) {
   const host = hostFromURL(bookmark.url);
   const label = bookmark.title || host;
   return `
@@ -64,7 +37,7 @@ function itemHTML(bookmark, query) {
           <img src="${faviconURL(bookmark.url)}" alt="" />
         </span>
         <div class="links-detail">
-          <span class="links-text">${highlightHTML(label, query)}</span>
+          <span class="links-text">${highlightTokens(label, tokens, phrase)}</span>
         </div>
       </a>
       <button type="button" class="card-close" aria-label="Remove ${escapeHTML(label)}" title="Remove">${CLEAR_ICON}</button>
@@ -94,15 +67,15 @@ export async function initBookmarks(root) {
 
   const results = await loadBookmarks();
 
-  function render(pages, query) {
+  function render(pages, tokens, phrase) {
     if (pages.length === 0) {
-      list.innerHTML = query
+      list.innerHTML = tokens.length
         ? '<li class="links-empty">No matching bookmarks.</li>'
         : '<li class="links-empty">No bookmarks yet.</li>';
       return;
     }
 
-    list.innerHTML = pages.map((bookmark) => itemHTML(bookmark, query)).join("");
+    list.innerHTML = pages.map((bookmark) => itemHTML(bookmark, tokens, phrase)).join("");
 
     for (const img of list.querySelectorAll(".links-icon img")) {
       img.addEventListener("error", () => img.classList.add("is-broken"));
@@ -121,16 +94,23 @@ export async function initBookmarks(root) {
 
   search.addEventListener("input", () => {
     clearBtn.hidden = search.value.length === 0;
-    const query = search.value.trim();
-    const lowerQuery = query.toLowerCase();
-    const matches = lowerQuery
-      ? results.filter((bookmark) =>
-          (bookmark.title || hostFromURL(bookmark.url))
-            .toLowerCase()
-            .includes(lowerQuery)
-        )
-      : results;
-    render(matches, query);
+    const phrase = search.value.trim().toLowerCase();
+    const tokens = searchTokens(phrase);
+    let matches = results;
+
+    if (tokens.length) {
+      matches = results
+        .map((bookmark, index) => ({
+          bookmark,
+          index,
+          score: scoreMatch(bookmark.title || hostFromURL(bookmark.url), tokens, phrase),
+        }))
+        .filter(({ score }) => Number.isFinite(score))
+        .sort((a, b) => b.score - a.score || a.index - b.index)
+        .map(({ bookmark }) => bookmark);
+    }
+
+    render(matches, tokens, phrase);
     list.scrollTop = 0;
   });
 

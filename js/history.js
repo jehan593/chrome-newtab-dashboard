@@ -1,36 +1,8 @@
+import { escapeHTML, highlightTokens, scoreMatch, searchTokens } from "./linkSearch.js";
 import * as storage from "./storage.js";
 
 const INITIAL_HISTORY_LIMIT = 50;
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
-
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function highlightHTML(str, query) {
-  const text = String(str ?? "");
-  if (!query) return escapeHTML(text);
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  let html = "";
-  let from = 0;
-
-  while (from < text.length) {
-    const at = lowerText.indexOf(lowerQuery, from);
-    if (at === -1) {
-      html += escapeHTML(text.slice(from));
-      break;
-    }
-    html += escapeHTML(text.slice(from, at));
-    html += `<mark class="links-match">${escapeHTML(text.slice(at, at + query.length))}</mark>`;
-    from = at + query.length;
-  }
-
-  return html;
-}
 
 function faviconURL(pageUrl) {
   return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=32`;
@@ -69,7 +41,7 @@ function shellHTML() {
   `;
 }
 
-function itemHTML(page, query) {
+function itemHTML(page, tokens, phrase) {
   const host = hostFromURL(page.url);
   const label = page.title || host;
   return `
@@ -79,8 +51,8 @@ function itemHTML(page, query) {
           <img src="${faviconURL(page.url)}" alt="" />
         </span>
         <div class="links-detail">
-          <span class="links-text">${highlightHTML(label, query)}</span>
-          <span class="links-action">${highlightHTML(page.url, query)}</span>
+          <span class="links-text">${highlightTokens(label, tokens, phrase)}</span>
+          <span class="links-action">${highlightTokens(page.url, tokens, phrase)}</span>
         </div>
         <time class="links-time" datetime="${new Date(page.lastVisitTime).toISOString()}">${relativeTime(page.lastVisitTime)}</time>
       </a>
@@ -104,16 +76,16 @@ export async function initHistory(root) {
   let results = initialHistory.filter((page) => !dismissedSet.has(page.url));
   let currentQuery = "";
 
-  function render(pages, query, preserveScroll = false) {
+  function render(pages, tokens, phrase, preserveScroll = false) {
     const scrollTop = list.scrollTop;
     if (pages.length === 0) {
-      list.innerHTML = query
+      list.innerHTML = tokens.length
         ? '<li class="links-empty">No matching links.</li>'
         : '<li class="links-empty">No browsing history yet.</li>';
       return;
     }
 
-    list.innerHTML = pages.map((page) => itemHTML(page, query)).join("");
+    list.innerHTML = pages.map((page) => itemHTML(page, tokens, phrase)).join("");
     if (preserveScroll) list.scrollTop = scrollTop;
 
     for (const img of list.querySelectorAll(".links-icon img")) {
@@ -143,15 +115,23 @@ export async function initHistory(root) {
   }
 
   function renderCurrent(preserveScroll = false) {
-    const lowerQuery = currentQuery.toLowerCase();
-    const matches = lowerQuery
-      ? results.filter((page) =>
-          `${page.title || ""} ${page.url} ${hostFromURL(page.url)}`
-            .toLowerCase()
-            .includes(lowerQuery)
-        )
-      : results;
-    render(matches, currentQuery, preserveScroll);
+    const tokens = searchTokens(currentQuery);
+    const phrase = currentQuery.toLowerCase();
+    let matches = results;
+
+    if (tokens.length) {
+      matches = results
+        .map((page, index) => ({
+          page,
+          index,
+          score: scoreMatch(`${page.title || ""} ${page.url} ${hostFromURL(page.url)}`, tokens, phrase),
+        }))
+        .filter(({ score }) => Number.isFinite(score))
+        .sort((a, b) => b.score - a.score || a.index - b.index)
+        .map(({ page }) => page);
+    }
+
+    render(matches, tokens, phrase, preserveScroll);
   }
 
   search.addEventListener("input", () => {
