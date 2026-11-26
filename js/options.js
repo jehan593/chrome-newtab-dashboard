@@ -263,12 +263,22 @@ const WIDGET_LABELS = {
 const widgetToggleListEl = document.getElementById("widget-toggle-list");
 const nextcloudSettingsCardEl = document.getElementById("nextcloud-settings-card");
 
+let widgetEnabled = {};
+
 function updateServiceCardVisibility(enabled) {
   nextcloudSettingsCardEl.hidden = !enabled.calendar;
 }
 
-async function loadWidgetToggles() {
-  const { enabled, order } = await storage.getWidgetConfig();
+function renderWidgetToggles(enabled, order) {
+  widgetEnabled = enabled;
+
+  // Same FLIP animation Tasks uses: record old positions, rebuild, animate
+  // each row from where it used to be.
+  const firstRects = new Map();
+  for (const el of widgetToggleListEl.querySelectorAll(".widget-row")) {
+    firstRects.set(el.dataset.widgetId, el.getBoundingClientRect());
+  }
+
   widgetToggleListEl.innerHTML = order
     .map(
       (id) => `
@@ -281,32 +291,62 @@ async function loadWidgetToggles() {
       </div>`
     )
     .join("");
+
+  for (const el of widgetToggleListEl.querySelectorAll(".widget-row")) {
+    const before = firstRects.get(el.dataset.widgetId);
+    if (!before) continue; // new row -- nothing to animate from
+    const after = el.getBoundingClientRect();
+    const dx = before.left - after.left;
+    const dy = before.top - after.top;
+    if (!dx && !dy) continue;
+
+    el.style.transition = "none";
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.transition = "transform 220ms ease";
+        el.style.transform = "";
+      });
+    });
+  }
+
   updateServiceCardVisibility(enabled);
+}
+
+async function loadWidgetToggles() {
+  const { enabled, order } = await storage.getWidgetConfig();
+  renderWidgetToggles(enabled, order);
 }
 
 widgetToggleListEl.addEventListener("change", async (e) => {
   if (e.target.type !== "checkbox") return;
-  const { enabled } = await storage.getWidgetConfig();
-  const nextEnabled = { ...enabled, [e.target.dataset.widgetId]: e.target.checked };
+  const nextEnabled = { ...widgetEnabled, [e.target.dataset.widgetId]: e.target.checked };
+  widgetEnabled = nextEnabled;
   await storage.setWidgetConfig({ enabled: nextEnabled });
   updateServiceCardVisibility(nextEnabled);
 });
 
-// Plain list reordering: drag a row, swap on dragover, persist on drop.
+// Same drag/drop flow as Tasks: highlight the target while dragging, then
+// reorder the saved array and re-render with the FLIP animation on drop.
 let draggedWidgetId = null;
+
+function clearWidgetDragState() {
+  draggedWidgetId = null;
+  widgetToggleListEl.querySelectorAll(".widget-row").forEach((el) => {
+    el.classList.remove("dragging", "drag-over", "drag-before", "drag-after");
+  });
+}
 
 widgetToggleListEl.addEventListener("dragstart", (e) => {
   const row = e.target.closest(".widget-row");
   if (!row) return;
   draggedWidgetId = row.dataset.widgetId;
   e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", draggedWidgetId);
   requestAnimationFrame(() => row.classList.add("dragging"));
 });
 
-widgetToggleListEl.addEventListener("dragend", () => {
-  draggedWidgetId = null;
-  widgetToggleListEl.querySelectorAll(".widget-row").forEach((row) => row.classList.remove("dragging"));
-});
+widgetToggleListEl.addEventListener("dragend", clearWidgetDragState);
 
 widgetToggleListEl.addEventListener("dragover", (e) => {
   if (!draggedWidgetId) return;
@@ -314,17 +354,33 @@ widgetToggleListEl.addEventListener("dragover", (e) => {
   const row = e.target.closest(".widget-row");
   if (!row || row.dataset.widgetId === draggedWidgetId) return;
 
-  const draggedEl = widgetToggleListEl.querySelector(`[data-widget-id="${draggedWidgetId}"]`);
-  const rect = row.getBoundingClientRect();
-  const isBefore = e.clientY < rect.top + rect.height / 2;
-  row.parentNode.insertBefore(draggedEl, isBefore ? row : row.nextSibling);
+  const rows = Array.from(widgetToggleListEl.querySelectorAll(".widget-row"));
+  rows.forEach((el) => el.classList.remove("drag-over", "drag-before", "drag-after"));
+
+  // Task-style splice puts the dragged row after the target when moving down,
+  // before it when moving up. Show that same side so the feedback is accurate.
+  const fromIndex = rows.findIndex((el) => el.dataset.widgetId === draggedWidgetId);
+  const toIndex = rows.indexOf(row);
+  row.classList.add("drag-over", fromIndex < toIndex ? "drag-after" : "drag-before");
 });
 
 widgetToggleListEl.addEventListener("drop", async (e) => {
   e.preventDefault();
-  if (!draggedWidgetId) return;
-  draggedWidgetId = null;
+  const id = draggedWidgetId;
+  const targetRow = e.target.closest(".widget-row");
+  clearWidgetDragState();
+  if (!targetRow || !id || targetRow.dataset.widgetId === id) return;
+
   const order = Array.from(widgetToggleListEl.querySelectorAll(".widget-row")).map((row) => row.dataset.widgetId);
+  const fromIndex = order.indexOf(id);
+  const toIndex = order.indexOf(targetRow.dataset.widgetId);
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  const [moved] = order.splice(fromIndex, 1);
+  order.splice(toIndex, 0, moved);
+
+  // Render immediately like Tasks, then persist in the background.
+  renderWidgetToggles(widgetEnabled, order);
   await storage.setWidgetConfig({ order });
 });
 

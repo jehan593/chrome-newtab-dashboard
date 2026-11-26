@@ -145,10 +145,33 @@
     width: auto;
     accent-color: var(--accent);
   }
+  #widget-toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
   .widget-row {
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  #widget-toggle-list .widget-row {
+    gap: 10px;
+    padding: 5px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  #widget-toggle-list .widget-row:hover {
+    border-color: var(--accent);
+  }
+  #widget-toggle-list .widget-row label {
+    flex: 1;
+    font-size: var(--fs-xs);
+  }
+  #widget-toggle-list .widget-row input[type="checkbox"] {
+    width: 16px;
+    flex-shrink: 0;
   }
   .widget-row label {
     display: flex;
@@ -163,14 +186,30 @@
     accent-color: var(--accent);
   }
   .widget-drag-handle {
+    visibility: hidden;
     cursor: grab;
     color: var(--text-dim);
     font-size: 14px;
     line-height: 1;
-    user-select: none;
+  }
+  .widget-row:hover .widget-drag-handle {
+    visibility: visible;
+  }
+  .widget-drag-handle:active {
+    cursor: grabbing;
   }
   .widget-row.dragging {
     opacity: 0.4;
+  }
+  .widget-row.drag-over {
+    background: var(--bg-nested);
+    border-color: var(--accent);
+  }
+  .widget-row.drag-before {
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+  .widget-row.drag-after {
+    box-shadow: inset 0 -2px 0 var(--accent);
   }
   .cal-swatch {
     display: inline-block;
@@ -214,12 +253,12 @@
     <p class="hint widgets-hint">
       Choose which widgets appear on the new tab page, and drag to reorder.
     </p>
-    <div class="calendar-list" id="widget-toggle-list"></div>
+    <div id="widget-toggle-list"></div>
   </section>
 
   <section class="settings-card settings-section-spaced">
     <h2>Most visited</h2>
-    <button type="button" class="btn-text" id="reset-dismissed-btn">Reset most visited tiles</button>
+    <button type="button" class="btn-text" id="reset-dismissed-btn">Reset most visited removed tiles</button>
   </section>
 
   <section class="settings-card settings-section-spaced" id="nextcloud-settings-card">
