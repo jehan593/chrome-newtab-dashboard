@@ -124,6 +124,53 @@ body.newtab {
   color: var(--text-muted);
 }
 
+/* Hover-only dismiss control shared by Recents cards and Most visited tiles.
+   visibility (not just opacity) keeps it from stealing clicks when hidden. */
+.card-close {
+  position: absolute;
+  /* Negative right offset pushes the badge past the card edge; the few px
+     left inside keep it clear of the Recents scrollport. */
+  top: 0;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  opacity: 0;
+  visibility: hidden;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.top-site-wrap .card-close {
+  top: -4px;
+}
+
+.card-close svg {
+  width: 9px;
+  height: 9px;
+  display: block;
+}
+
+.top-site-wrap:hover .card-close,
+.top-site-wrap:focus-within .card-close,
+.recents-row:hover .card-close,
+.recents-row:focus-within .card-close {
+  opacity: 1;
+  visibility: visible;
+}
+
+.card-close:hover {
+  background: var(--danger);
+  color: var(--bg);
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -395,22 +442,102 @@ body.newtab {
 
 /* ---------- Recents ---------- */
 
-.recents-list {
+#recents-widget h2 {
   margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.recents-item {
+.recents-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border);
+  /* Scrollbar gutter + list padding, so the search box ends where cards do. */
+  padding-right: 16px;
+  margin-bottom: 4px;
 }
 
-.recents-item:last-child {
-  border-bottom: none;
+.recents-search-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.recents-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 34px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-2xs);
+}
+
+/* The native cross has a tiny hit area; use our own button instead. */
+.recents-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.recents-search::placeholder {
+  color: var(--text-dim);
+}
+
+.recents-search:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.recents-list {
+  margin: 0;
+  /* Right room handles the badge's sideways overhang. */
+  padding: 0 8px 0 0;
+  list-style: none;
+  display: grid;
+  /* Five rows exactly fill the visible area, so scrolling never leaves a
+     half-clipped card at the bottom. */
+  grid-auto-rows: calc((100% - 12px) / 5);
+  align-content: start;
+  gap: 3px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Reserve the gutter even when few results are shown, keeping the cards'
+     right edge aligned with the search box above. */
+  scrollbar-gutter: stable;
+  /* Let overhanging badges paint past the scrollport so rows can snap flush
+     to the top edge without their close button being clipped. */
+  overflow-clip-margin: 6px;
+  scroll-snap-type: y mandatory;
+}
+
+.recents-row {
+  position: relative;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.recents-item {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.recents-item:hover,
+.recents-item:focus-visible {
+  border-color: var(--accent);
+}
+
+.recents-item:focus-visible {
+  outline: none;
 }
 
 .recents-icon {
@@ -434,8 +561,11 @@ body.newtab {
   text-decoration: none;
 }
 
-.recents-text:hover {
-  color: var(--accent);
+.recents-match {
+  background: var(--match);
+  color: var(--match-text);
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .recents-detail {
@@ -443,6 +573,7 @@ body.newtab {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  line-height: 1.1;
 }
 
 .recents-action {
@@ -460,6 +591,7 @@ body.newtab {
 .recents-time {
   flex: none;
   font-size: var(--fs-xs);
+  line-height: 1.1;
   color: var(--text-dim);
 }
 
@@ -606,16 +738,20 @@ body.newtab {
 .search-clear {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 4px;
   transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
-  padding: 2px;
+  padding: 0;
   cursor: pointer;
+  z-index: 1;
 }
 
 .search-clear[hidden] {
@@ -623,17 +759,18 @@ body.newtab {
 }
 
 .search-clear svg {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 
 .search-clear:hover {
+  background: var(--hover-bg);
   color: var(--text);
 }
 
 .search-input {
-  padding-right: 30px;
+  padding-right: 34px;
 }
 
 .search-input:focus-visible {
@@ -680,7 +817,16 @@ body.newtab {
   gap: 8px;
 }
 
+.top-site-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
 .top-site {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;

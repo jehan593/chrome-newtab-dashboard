@@ -22,6 +22,8 @@
   --danger: var(--nord11);
   --success: var(--nord14);
   --highlight: var(--nord15);
+  --match: var(--nord13);
+  --match-text: var(--nord0);
 
   /* Shared type scale for all widgets under the fixed 251px tile. */
   --fs-2xs: 10px;

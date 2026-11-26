@@ -355,3 +355,9 @@ searchSuggestionsToggleEl.addEventListener("change", () => {
 
 loadSearchSuggestionsToggle();
 
+// ---------- Hidden links ----------
+
+document.getElementById("reset-dismissed-btn").addEventListener("click", () => {
+  storage.clearDismissedLinks();
+});
+

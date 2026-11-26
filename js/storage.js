@@ -65,6 +65,22 @@ export async function setSearchProvider(id) {
   await set({ searchProvider: id });
 }
 
+/** URLs the user removed from Most visited or Recents. */
+export async function getDismissedLinks() {
+  const { dismissedLinks } = await get("dismissedLinks");
+  return Array.isArray(dismissedLinks) ? dismissedLinks : [];
+}
+
+export async function addDismissedLink(url) {
+  const current = await getDismissedLinks();
+  if (current.includes(url)) return;
+  await set({ dismissedLinks: [...current, url] });
+}
+
+export async function clearDismissedLinks() {
+  await set({ dismissedLinks: [] });
+}
+
 export async function getNotes() {
   const { notesScratchpad } = await get("notesScratchpad");
   return notesScratchpad || "";
