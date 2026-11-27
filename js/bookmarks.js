@@ -1,4 +1,5 @@
 import { escapeHTML, highlightTokens, scoreMatch, searchTokens } from "./linkSearch.js";
+import { installListNavigation } from "./linkListNav.js";
 
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 
@@ -64,6 +65,7 @@ export async function initBookmarks(root) {
   const list = root.querySelector(".links-list");
   const search = root.querySelector(".links-search");
   const clearBtn = root.querySelector(".links-clear");
+  installListNavigation(root, list, search);
 
   const results = await loadBookmarks();
 

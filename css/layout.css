@@ -517,6 +517,11 @@ body.newtab {
   min-width: 0;
 }
 
+.links-row.is-active .links-item {
+  background: var(--selected-bg);
+  color: var(--selected-text);
+}
+
 .links-item {
   height: 100%;
   display: flex;

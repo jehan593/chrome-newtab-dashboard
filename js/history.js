@@ -1,4 +1,5 @@
 import { escapeHTML, highlightTokens, scoreMatch, searchTokens } from "./linkSearch.js";
+import { installListNavigation } from "./linkListNav.js";
 import * as storage from "./storage.js";
 
 const INITIAL_HISTORY_LIMIT = 50;
@@ -65,6 +66,7 @@ export async function initHistory(root) {
   const list = root.querySelector(".links-list");
   const search = root.querySelector(".links-search");
   const clearBtn = root.querySelector(".links-clear");
+  installListNavigation(root, list, search);
 
   // Paint the newest rows first; fetching the whole history stays off the
   // critical path so the card isn't blank while Chrome scans it.
